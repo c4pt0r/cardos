@@ -5,6 +5,7 @@
 #include "apps/WiFiApp.h"
 #include "core/AppManager.h"
 #include "core/InputRouter.h"
+#include "core/PowerManager.h"
 #include "services/NvsStorage.h"
 #include "services/WiFiService.h"
 #include "ui/StatusBar.h"
@@ -18,6 +19,7 @@ NvsStorage nvs;
 WiFiStore wifiStore(nvs);
 WiFiService wifiService;
 WiFiApp wifiApp(wifiService, wifiStore);
+PowerManager power;
 uint32_t lastMs = 0;
 }  // namespace
 
@@ -28,9 +30,13 @@ void setup() {
   M5Cardputer.Display.setBrightness(200);
   Serial.begin(115200);
   Serial.println("[cardos] boot");
+  power.begin();
+  if (PowerManager::wokeFromDeepSleep())
+    Serial.println("[cardos] woke from deep sleep");
 
   wifiStore.load();
   wifiService.begin(&wifiStore);
+  wifiService.autoConnect();
   launcher.addEntry("WiFi Settings", &wifiApp);
   launcher.addEntry("System Info", &sysinfo);
   apps.begin(M5Cardputer.Display, statusbar::paint);
@@ -42,7 +48,11 @@ void loop() {
   M5Cardputer.update();
   uint32_t now = millis();
   wifiService.tick(now);
-  for (const KeyEvent& ev : input.poll()) apps.dispatch(ev);
+  power.keepAwake(wifiService.busy());
+  power.tick(now);
+  for (const KeyEvent& ev : input.poll()) {
+    if (!power.onInput(now)) apps.dispatch(ev);
+  }
   apps.update(now - lastMs);
 
   static uint32_t lastStatusMs = 0;
