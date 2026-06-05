@@ -44,11 +44,12 @@ void WiFiStore::upsert(const std::string& ssid, const std::string& password) {
 }
 
 void WiFiStore::remove(const std::string& ssid) {
+  size_t before = networks_.size();
   networks_.erase(
       std::remove_if(networks_.begin(), networks_.end(),
                      [&](const WifiNetwork& n) { return n.ssid == ssid; }),
       networks_.end());
-  persist();
+  if (networks_.size() != before) persist();  // skip flash write on no-op
 }
 
 void WiFiStore::touch(const std::string& ssid, uint32_t ts) {

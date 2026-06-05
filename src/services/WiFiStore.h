@@ -26,6 +26,7 @@ class WiFiStore {
 
   void load();  // deserialize from backend; garbage -> empty list
   const std::vector<WifiNetwork>& networks() const { return networks_; }
+  // Returned pointer is valid only until the next mutation (upsert/remove/load).
   const WifiNetwork* find(const std::string& ssid) const;
 
   // Insert or update a credential; evicts the oldest-lastOkTs entry when
