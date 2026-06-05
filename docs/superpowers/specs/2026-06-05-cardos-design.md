@@ -118,7 +118,8 @@ cardos/
 │   ├── main.cpp
 │   ├── core/    App.h, AppManager, InputRouter, PowerManager
 │   ├── ui/      Theme.h, StatusBar, MenuList, TextInput, Dialog
-│   ├── services/ WiFiService, WiFiStore   # WiFiStore: NVS 凭据读写，纯逻辑可单测
+│   ├── services/ WiFiService, WiFiStore   # WiFiStore: 凭据列表逻辑(序列化/淘汰)，
+│   │                                       #   存储后端为接口(真机=NVS, 单测=内存 mock)
 │   └── apps/    LauncherApp, WiFiApp, SysInfoApp
 ├── test/                   # PIO native 单测
 └── docs/superpowers/specs/
@@ -130,7 +131,7 @@ cardos/
 
 ## 7. 测试策略
 
-- **native 单测**（`pio test -e native`）：WiFiStore 增删/上限淘汰、InputRouter 键映射、MenuList 滚动窗口计算——均为无硬件依赖的纯逻辑。
+- **native 单测**（`pio test -e native`）：WiFiStore 增删/上限淘汰（注入内存 mock 存储后端）、InputRouter 键映射、MenuList 滚动窗口计算——均为无硬件依赖的纯逻辑。
 - **真机验收清单**：
   1. 开机显示 launcher，状态栏正常；
   2. 扫描出周围热点，含中文 SSID 正常显示；
