@@ -4,7 +4,8 @@ void AppManager::begin(M5GFX& display, StatusBarPainter painter) {
   display_ = &display;
   statusBar_ = painter;
   canvas_.setColorDepth(16);
-  canvas_.createSprite(display.width(), display.height());
+  if (!canvas_.createSprite(display.width(), display.height()))
+    Serial.println("[cardos] FATAL: canvas alloc failed");  // render() skips
 }
 
 void AppManager::push(App* app) {
@@ -35,10 +36,10 @@ void AppManager::requestRedraw() { forceRedraw_ = true; }
 
 void AppManager::render() {
   App* app = top();
-  if (!app) return;
-  if (!forceRedraw_ && !app->consumeDirty()) return;
+  if (!app || !canvas_.getBuffer()) return;
+  bool dirty = app->consumeDirty();
+  if (!forceRedraw_ && !dirty) return;
   forceRedraw_ = false;
-  app->consumeDirty();
   canvas_.fillSprite(TFT_BLACK);
   app->render(canvas_);
   if (statusBar_) statusBar_(canvas_, app->title());
