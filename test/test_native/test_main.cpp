@@ -2,6 +2,7 @@
 #include "../../src/core/KeyEvent.h"
 #include "../../src/ui/scroll.h"
 #include "../../src/core/IdlePolicy.h"
+#include "../../src/services/WiFiStore.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -109,6 +110,82 @@ void test_keep_awake_suppresses_sleep_not_dim() {
   TEST_ASSERT_EQUAL((int)IdleState::SleepPending, (int)p.state(301000));
 }
 
+struct InMemoryStorage : StorageBackend {
+  std::string data;
+  std::string load() override { return data; }
+  void save(const std::string& s) override { data = s; }
+};
+
+void test_store_starts_empty() {
+  InMemoryStorage mem;
+  WiFiStore store(mem);
+  store.load();
+  TEST_ASSERT_EQUAL(0, (int)store.networks().size());
+}
+
+void test_store_upsert_and_find() {
+  InMemoryStorage mem;
+  WiFiStore store(mem);
+  store.upsert("home", "pw123");
+  const WifiNetwork* n = store.find("home");
+  TEST_ASSERT_NOT_NULL(n);
+  TEST_ASSERT_EQUAL_STRING("pw123", n->password.c_str());
+}
+
+void test_store_upsert_updates_password() {
+  InMemoryStorage mem;
+  WiFiStore store(mem);
+  store.upsert("home", "old");
+  store.upsert("home", "new");
+  TEST_ASSERT_EQUAL(1, (int)store.networks().size());
+  TEST_ASSERT_EQUAL_STRING("new", store.find("home")->password.c_str());
+}
+
+void test_store_persists_roundtrip() {
+  InMemoryStorage mem;
+  {
+    WiFiStore store(mem);
+    store.upsert("home", "pw123");
+    store.touch("home", 42);
+  }
+  WiFiStore store2(mem);
+  store2.load();
+  TEST_ASSERT_EQUAL(1, (int)store2.networks().size());
+  TEST_ASSERT_EQUAL_STRING("pw123", store2.find("home")->password.c_str());
+  TEST_ASSERT_EQUAL(42, (int)store2.find("home")->lastOkTs);
+}
+
+void test_store_evicts_oldest_when_full() {
+  InMemoryStorage mem;
+  WiFiStore store(mem);
+  for (int i = 0; i < 8; i++) {
+    std::string ssid = "net" + std::to_string(i);
+    store.upsert(ssid, "pw");
+    store.touch(ssid, 100 + i);  // net0 oldest
+  }
+  store.upsert("net8", "pw");    // 9th entry -> evict net0
+  TEST_ASSERT_EQUAL(8, (int)store.networks().size());
+  TEST_ASSERT_NULL(store.find("net0"));
+  TEST_ASSERT_NOT_NULL(store.find("net8"));
+}
+
+void test_store_remove() {
+  InMemoryStorage mem;
+  WiFiStore store(mem);
+  store.upsert("home", "pw");
+  store.remove("home");
+  TEST_ASSERT_NULL(store.find("home"));
+  TEST_ASSERT_EQUAL(0, (int)store.networks().size());
+}
+
+void test_store_load_garbage_is_empty() {
+  InMemoryStorage mem;
+  mem.data = "not json {{{";
+  WiFiStore store(mem);
+  store.load();
+  TEST_ASSERT_EQUAL(0, (int)store.networks().size());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -129,5 +206,12 @@ int main(int, char**) {
   RUN_TEST(test_input_resets_timer);
   RUN_TEST(test_wake_input_is_swallowed_when_dimmed);
   RUN_TEST(test_keep_awake_suppresses_sleep_not_dim);
+  RUN_TEST(test_store_starts_empty);
+  RUN_TEST(test_store_upsert_and_find);
+  RUN_TEST(test_store_upsert_updates_password);
+  RUN_TEST(test_store_persists_roundtrip);
+  RUN_TEST(test_store_evicts_oldest_when_full);
+  RUN_TEST(test_store_remove);
+  RUN_TEST(test_store_load_garbage_is_empty);
   return UNITY_END();
 }
