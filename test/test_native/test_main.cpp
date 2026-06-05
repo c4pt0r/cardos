@@ -35,6 +35,20 @@ void test_fn_flag_passthrough() {
   TEST_ASSERT_TRUE(ev.fn);
 }
 
+void test_nav_keys_left_right() {
+  KeyEvent left = mapKey(',', false, false, false, false);
+  TEST_ASSERT_EQUAL((int)KeyCode::Left, (int)left.code);
+  TEST_ASSERT_EQUAL(',', left.ch);
+  KeyEvent right = mapKey('/', false, false, false, false);
+  TEST_ASSERT_EQUAL((int)KeyCode::Right, (int)right.code);
+  TEST_ASSERT_EQUAL('/', right.ch);
+}
+
+void test_null_char_maps_to_none() {
+  KeyEvent ev = mapKey(0, false, false, false, false);
+  TEST_ASSERT_EQUAL((int)KeyCode::None, (int)ev.code);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -43,5 +57,7 @@ int main(int, char**) {
   RUN_TEST(test_nav_keys_carry_char);
   RUN_TEST(test_printable_char);
   RUN_TEST(test_fn_flag_passthrough);
+  RUN_TEST(test_nav_keys_left_right);
+  RUN_TEST(test_null_char_maps_to_none);
   return UNITY_END();
 }

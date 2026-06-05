@@ -22,6 +22,7 @@ inline KeyEvent mapKey(char raw, bool fn, bool enter, bool del, bool tab) {
   if (enter) { ev.code = KeyCode::Enter; return ev; }
   if (del)   { ev.code = KeyCode::Backspace; return ev; }
   if (tab)   { ev.code = KeyCode::Tab; return ev; }
+  if (!raw) { ev.code = KeyCode::None; return ev; }
   switch (raw) {
     case '`': ev.code = KeyCode::Esc; return ev;
     case ';': ev.code = KeyCode::Up; break;
