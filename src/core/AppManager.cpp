@@ -1,0 +1,46 @@
+#include "AppManager.h"
+
+void AppManager::begin(M5GFX& display, StatusBarPainter painter) {
+  display_ = &display;
+  statusBar_ = painter;
+  canvas_.setColorDepth(16);
+  canvas_.createSprite(display.width(), display.height());
+}
+
+void AppManager::push(App* app) {
+  app->attach(this);
+  stack_.push_back(app);
+  app->onEnter();
+  forceRedraw_ = true;
+}
+
+void AppManager::pop() {
+  if (stack_.size() <= 1) return;  // launcher stays at the bottom
+  stack_.back()->onExit();
+  stack_.pop_back();
+  forceRedraw_ = true;
+}
+
+void AppManager::dispatch(const KeyEvent& ev) {
+  App* app = top();
+  if (!app) return;
+  if (!app->handleKey(ev) && ev.code == KeyCode::Esc) pop();
+}
+
+void AppManager::update(uint32_t dtMs) {
+  if (App* app = top()) app->update(dtMs);
+}
+
+void AppManager::requestRedraw() { forceRedraw_ = true; }
+
+void AppManager::render() {
+  App* app = top();
+  if (!app) return;
+  if (!forceRedraw_ && !app->consumeDirty()) return;
+  forceRedraw_ = false;
+  app->consumeDirty();
+  canvas_.fillSprite(TFT_BLACK);
+  app->render(canvas_);
+  if (statusBar_) statusBar_(canvas_, app->title());
+  canvas_.pushSprite(display_, 0, 0);
+}
