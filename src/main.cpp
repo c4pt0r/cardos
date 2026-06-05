@@ -33,7 +33,6 @@ class EchoApp : public App {
   KeyEvent last_;
 };
 
-
 AppManager apps;
 InputRouter input;
 EchoApp echo;

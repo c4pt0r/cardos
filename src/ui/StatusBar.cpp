@@ -16,8 +16,11 @@ void setWifi(WifiIcon icon) {
 }
 
 void setBattery(int pct) {
-  int bars = pct / 26;  // 0..3, only repaint when the bar count changes
-  if (bars != batteryPct_ / 26) dirty_ = true;
+  // Repaint only when the segment count (same ceil formula as paint())
+  // or the low-battery color threshold changes.
+  bool segChanged = (pct + 25) / 26 != (batteryPct_ + 25) / 26;
+  bool lowChanged = (pct <= 20) != (batteryPct_ <= 20);
+  if (segChanged || lowChanged) dirty_ = true;
   batteryPct_ = pct;
 }
 
