@@ -10,7 +10,19 @@ A small, extensible OS with a menu-based GUI for the [M5Stack Cardputer](https:/
 
 ## Status
 
-Design phase. See the [design document](docs/superpowers/specs/2026-06-05-cardos-design.md).
+MVP working on hardware: launcher + app framework, WiFi management
+(scan / connect / remember / auto-connect), HTTP demo app, idle dimming
+and deep sleep with G0 wake.
+Docs: [design](docs/superpowers/specs/2026-06-05-cardos-design.md) ·
+[implementation plan](docs/superpowers/plans/2026-06-05-cardos-mvp.md)
+
+## Apps
+
+| App | What it does |
+|---|---|
+| WiFi Settings | Scan, connect (on-device password entry), saved networks (8 max), auto-connect on boot |
+| HTTP Demo | Plain-HTTP GET smoke tests (public IP, example.com) with latency/status display |
+| System Info | SSID / IP / RSSI / heap / battery / uptime |
 
 ## Tech Stack
 
