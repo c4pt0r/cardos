@@ -1,155 +1,156 @@
-# CardOS 设计文档
+# CardOS Design Document
 
-日期：2026-06-05
-目标设备：M5Stack Cardputer（ESP32-S3FN8，240×135 TFT，QWERTY 键盘矩阵，G0/BtnA 按钮，120mAh 电池，8MB Flash，无 PSRAM）
+Date: 2026-06-05
+Target device: M5Stack Cardputer (ESP32-S3FN8, 240×135 TFT, QWERTY keyboard matrix, G0/BtnA button, 120mAh battery, 8MB flash, no PSRAM)
 
-## 1. 项目定位
+## 1. Project Goal
 
-为 Cardputer 实现一个**可扩展的小 OS 框架**：launcher + app 架构。第一个 app 是 WiFi 管理；框架为后续 app（时钟、文件管理等）预留清晰的扩展点。配套简单电源管理（空闲调暗、空闲深度休眠）。
+A **small, extensible OS framework** for the Cardputer: a launcher + app architecture. The first app is WiFi management; the framework provides clear extension points for future apps (clock, file manager, etc.). Includes simple power management (idle dimming, idle deep sleep).
 
-**技术栈**：C++ / Arduino framework + M5Unified/M5GFX（经 `m5stack/M5Cardputer` 库）+ PlatformIO 构建。
+**Tech stack**: C++ / Arduino framework + M5Unified/M5GFX (via the `m5stack/M5Cardputer` library) + PlatformIO build system.
 
-## 2. 总体架构
+## 2. Architecture Overview
 
-单核心主循环，协作式调度，不额外创建 FreeRTOS task。
+Single main loop, cooperative scheduling, no extra FreeRTOS tasks.
 
 ```
 loop():
-  M5Cardputer.update()          // 轮询键盘矩阵、按钮
-  InputRouter                   // 原始按键 → KeyEvent
-  PowerManager.tick()           // KeyEvent 重置空闲计时；超时走休眠流程
-  AppManager.dispatch(event)    // 事件发给栈顶 app
-  AppManager.update(dt)         // 栈顶 app 逻辑帧
-  AppManager.render(canvas)     // 仅 dirty 时重绘 → pushSprite
+  M5Cardputer.update()          // poll keyboard matrix and buttons
+  InputRouter                   // raw keys → KeyEvent
+  PowerManager.tick()           // KeyEvent resets idle timer; timeout → sleep flow
+  AppManager.dispatch(event)    // deliver events to the top-of-stack app
+  AppManager.update(dt)         // logic frame for the active app
+  AppManager.render(canvas)     // redraw only when dirty → pushSprite
 ```
 
-### App 模型 —— 场景栈
+### App Model — Scene Stack
 
-- `App` 基类：`onEnter() / onExit() / handleKey(ev) / update(dt) / render(gfx)` + `requestRedraw()` 标脏。
-- `AppManager` 持有 app 栈：`LauncherApp` 在栈底；进入功能即 `push(app)`，ESC 返回即 `pop()`。app 内子页面（如扫描列表 → 密码输入）复用同一栈机制。
-- **Service 与 UI 分离**：`WiFiService`、`PowerManager` 是全局单例服务；app 只是其 UI 前端。新增 app = 实现 `App` 接口 + launcher 注册一行。
+- `App` base class: `onEnter() / onExit() / handleKey(ev) / update(dt) / render(gfx)` plus `requestRedraw()` to mark dirty.
+- `AppManager` owns an app stack: `LauncherApp` sits at the bottom; entering a feature does `push(app)`, ESC does `pop()`. Sub-pages inside an app (e.g. scan list → password input) reuse the same stack mechanism.
+- **Services are separate from UI**: `WiFiService` and `PowerManager` are global singleton services; apps are merely their UI front-ends. Adding a new app = implement the `App` interface + one registration line in the launcher.
 
-### 绘制
+### Rendering
 
-- M5GFX `M5Canvas` 离屏 sprite（240×135×16bit ≈ 64KB，SRAM 可容纳），每帧整屏绘制后一次 push，无闪烁。
-- 状态栏由框架统一渲染（顶部 ~16px）：左侧 app 标题；右侧 WiFi 图标（断开 / 连接中动画 / 已连+RSSI 格数）+ 电池格数。
-- 中文支持：M5GFX 内置 `efontCN_12/16`，中文 SSID 与 UI 文案直接显示。
+- M5GFX `M5Canvas` off-screen sprite (240×135×16bit ≈ 64KB, fits in SRAM); each frame is drawn fully into the sprite then pushed once — no flicker.
+- The status bar is rendered by the framework (top ~16px): app title on the left; WiFi icon (disconnected / connecting animation / connected + RSSI bars) and battery bars on the right.
+- CJK support: M5GFX built-in `efontCN_12/16` fonts, so Chinese SSIDs render correctly.
 
-## 3. UI 控件与键盘输入
+## 3. UI Widgets and Keyboard Input
 
-三个复用控件：
+Three reusable widgets:
 
-1. **MenuList** — 垂直列表，滚动（一页约 6 行），高亮选中行，每项可带右侧附注（信号格、🔒、已保存✓）。
-2. **TextInput** — 单行输入（密码用）：可打印字符输入、Backspace 删除、Enter 提交、ESC 取消；默认明文显示，Tab 切换掩码。
-3. **Toast/Dialog** — 居中提示：连接中 spinner、成功/失败、二选一确认框。
+1. **MenuList** — vertical list with scrolling (~6 rows per page), highlighted selection, optional right-side annotation per item (signal bars, 🔒, saved ✓).
+2. **TextInput** — single-line input (for passwords): printable characters, Backspace, Enter to submit, ESC to cancel; plaintext display by default, Tab toggles masking.
+3. **Toast/Dialog** — centered overlays: connecting spinner, success/failure messages, two-option confirmation dialogs.
 
-键盘映射（`InputRouter` 统一翻译，app 不接触矩阵扫描）：
+Keyboard mapping (translated centrally by `InputRouter`; apps never touch matrix scanning):
 
-| 物理键 | 语义 |
+| Physical key | Meaning |
 |---|---|
-| `;` / `.` | 上 / 下 |
-| `,` / `/` | 左 / 右（预留） |
-| Enter | 确认 |
-| `` ` `` (ESC) | 返回 / 取消 |
-| Fn+其他 | 预留全局快捷键 |
-| 其余可打印键 | 文本输入时按字面值进入 TextInput |
+| `;` / `.` | Up / Down |
+| `,` / `/` | Left / Right (reserved) |
+| Enter | Confirm |
+| `` ` `` (ESC) | Back / Cancel |
+| Fn+key | Reserved for future global shortcuts |
+| Other printable keys | Literal input when a TextInput is focused |
 
-## 4. WiFi App 与持久化
+## 4. WiFi App and Persistence
 
-### 页面流
+### Page Flow
 
 ```
-Launcher ─选「WiFi 设置」→ WiFi 主页
-  WiFi 主页 (MenuList)
-    ├─ 状态行: "已连接: <SSID> (<IP>)" / "未连接"
-    ├─ [扫描网络] → spinner → 结果列表(SSID+信号格+🔒+已保存✓)
-    │     └─ 选中 → 已保存? 直接连 : TextInput 输密码 → 连接
-    │         └─ Toast: 连接中… → 成功(保存并返回) / 失败(重输或放弃)
-    ├─ [已保存的网络] → 列表 → 选中 → Dialog: [连接] [删除]
-    └─ [断开连接] (仅已连接时显示)
+Launcher ─ select "WiFi Settings" → WiFi home
+  WiFi home (MenuList)
+    ├─ Status row: "Connected: <SSID> (<IP>)" / "Not connected"
+    ├─ [Scan networks] → spinner → result list (SSID + signal bars + 🔒 + saved ✓)
+    │     └─ select AP → saved? connect directly : TextInput for password → connect
+    │         └─ Toast: connecting… → success (save & return) / failure (retry or give up)
+    ├─ [Saved networks] → list → select → Dialog: [Connect] [Delete]
+    └─ [Disconnect] (shown only while connected)
 ```
 
-### WiFiService 状态机
+### WiFiService State Machine
 
 - `IDLE → SCANNING → CONNECTING → CONNECTED / FAILED`
-- 全异步：`WiFi.scanNetworks(true)` + WiFi 事件回调，主循环不阻塞，连接中可 ESC 取消。
-- 连接超时 15s 判失败；`AUTH_FAIL`（密码错误）与 `NO_AP_FOUND` 给不同错误文案。
+- Fully asynchronous: `WiFi.scanNetworks(true)` + WiFi event callbacks; the main loop never blocks, and connecting can be cancelled with ESC.
+- 15s connect timeout counts as failure; `AUTH_FAIL` (wrong password) and `NO_AP_FOUND` produce distinct error messages.
 
-### 凭据持久化（NVS / Preferences）
+### Credential Persistence (NVS / Preferences)
 
-- namespace `cardos.wifi`，ArduinoJson 序列化的数组：`[{ssid, password, last_ok_ts}]`。
-- 上限 **8 条**，满时淘汰最久未成功连接的（按 `last_ok_ts`）。
-- 密码明文存储（设备本地，无安全边界要求，不引入加密）。
+- Namespace `cardos.wifi`, an ArduinoJson-serialized array: `[{ssid, password, last_ok_ts}]`.
+- Capacity **8 entries**; when full, evict the entry with the oldest successful connection (`last_ok_ts`).
+- Passwords stored in plaintext (device-local, no security boundary requirement; no encryption complexity).
 
-### 开机自动连接
+### Auto-Connect on Boot
 
-boot → `autoConnect()` → 异步扫描 → 取「已保存 ∩ 可见」中 RSSI 最强者连接 → 失败按 RSSI 次序重试其余已知网络 → 全失败停在未连接（不无限重试）。全程后台进行，不阻塞 launcher 显示，状态栏实时反映进度。
+boot → `autoConnect()` → async scan → connect to the strongest-RSSI network in "saved ∩ visible" → on failure, retry remaining known networks in RSSI order → if all fail, stay disconnected (no infinite retry). Runs entirely in the background without blocking the launcher; the status bar reflects progress in real time.
 
-## 5. 电源管理
+## 5. Power Management
 
-分级降功耗（PowerManager）：
+Tiered power saving (PowerManager):
 
-| 空闲时长 | 动作 |
+| Idle time | Action |
 |---|---|
-| 0–60s | 正常亮度（约 80%） |
-| 60s | 调暗至 ~20%；任意键恢复亮度，且该键**不**传给 app |
-| 5min | 深度休眠流程 |
+| 0–60s | Normal brightness (~80%) |
+| 60s | Dim to ~20%; any key restores brightness and is **not** forwarded to the app |
+| 5min | Deep sleep flow |
 
-深度休眠流程：
+Deep sleep flow:
 
-1. 全屏提示「即将休眠，按 G0 键唤醒」约 3s（任意键取消）；
-2. `WiFi.disconnect()` + 关射频；
-3. 关背光、显示芯片睡眠；
-4. `esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0)`（G0 按钮唤醒）;
-5. `esp_deep_sleep_start()`。
+1. Full-screen notice "Sleeping soon — press G0 to wake" for ~3s (any key cancels);
+2. `WiFi.disconnect()` + radio off;
+3. Backlight off, display controller to sleep;
+4. `esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0)` (G0 button wake);
+5. `esp_deep_sleep_start()`.
 
-唤醒后为全新启动（深睡不保留 RAM）：走正常 boot + WiFi 自动重连；用 `esp_reset_reason()` 区分冷启动/唤醒，唤醒时跳过开机 logo。
+After wake: deep sleep wake is a fresh boot (RAM is not retained) — normal boot flow + WiFi auto-connect. Use `esp_reset_reason()` to distinguish cold boot from wake; skip the boot logo on wake for a faster feel.
 
-空闲计时规则：任何 KeyEvent 重置计时；app 可调用 `keepAwake()` 抑制休眠；WiFi 连接进行中自动抑制休眠。
+Idle timer rules: any KeyEvent resets the timer; apps may call `keepAwake()` to suppress sleep; an in-progress WiFi connection also suppresses sleep.
 
-电池显示：ADC 读电池分压 → 电压查表 → 4 格图标，只求趋势准确。
+Battery display: read battery voltage via ADC divider → lookup table → 4-bar icon; trend accuracy only, not precise percentages.
 
-## 6. 项目结构与依赖
+## 6. Project Layout and Dependencies
 
 ```
 cardos/
-├── platformio.ini          # env:m5stack-cardputer (arduino) + env:native (单测)
+├── platformio.ini          # env:m5stack-cardputer (arduino) + env:native (unit tests)
 ├── src/
 │   ├── main.cpp
 │   ├── core/    App.h, AppManager, InputRouter, PowerManager
 │   ├── ui/      Theme.h, StatusBar, MenuList, TextInput, Dialog
-│   ├── services/ WiFiService, WiFiStore   # WiFiStore: 凭据列表逻辑(序列化/淘汰)，
-│   │                                       #   存储后端为接口(真机=NVS, 单测=内存 mock)
+│   ├── services/ WiFiService, WiFiStore   # WiFiStore: credential list logic
+│   │                                      #   (serialization/eviction) over a storage
+│   │                                      #   interface (device=NVS, tests=in-memory mock)
 │   └── apps/    LauncherApp, WiFiApp, SysInfoApp
-├── test/                   # PIO native 单测
+├── test/                   # PIO native unit tests
 └── docs/superpowers/specs/
 ```
 
-依赖：`m5stack/M5Cardputer`（含 M5Unified/M5GFX）、`bblanchon/ArduinoJson`。
+Dependencies: `m5stack/M5Cardputer` (bundles M5Unified/M5GFX), `bblanchon/ArduinoJson`.
 
-构建/烧录：`pio run -t upload`（USB CDC）；调试 `pio device monitor` + 内置 `LOG()` 串口宏。
+Build/flash: `pio run -t upload` (USB CDC); debugging via `pio device monitor` plus a built-in `LOG()` serial macro.
 
-## 7. 测试策略
+## 7. Testing Strategy
 
-- **native 单测**（`pio test -e native`）：WiFiStore 增删/上限淘汰（注入内存 mock 存储后端）、InputRouter 键映射、MenuList 滚动窗口计算——均为无硬件依赖的纯逻辑。
-- **真机验收清单**：
-  1. 开机显示 launcher，状态栏正常；
-  2. 扫描出周围热点，含中文 SSID 正常显示；
-  3. 选热点输密码连接成功，状态栏显示已连+IP；
-  4. 输错密码提示「密码错误」，可重输；
-  5. 重启后自动连接已保存网络；
-  6. 有多个已保存网络时连 RSSI 最强者；
-  7. 已保存网络可查看、删除；
-  8. 空闲 60s 屏幕调暗，按键恢复；
-  9. 空闲 5min 出现休眠提示后深度休眠；
-  10. 按 G0 唤醒，自动重连 WiFi。
+- **Native unit tests** (`pio test -e native`): WiFiStore add/remove/eviction (with the in-memory mock storage backend), InputRouter key mapping, MenuList scroll-window math — all hardware-independent pure logic.
+- **On-device acceptance checklist**:
+  1. Boots into the launcher with a working status bar;
+  2. Scans nearby APs; Chinese SSIDs render correctly;
+  3. Select AP, enter password, connect successfully; status bar shows connected + IP;
+  4. Wrong password produces a "wrong password" error and allows retry;
+  5. After reboot, auto-connects to a saved network;
+  6. With multiple saved networks, connects to the strongest RSSI;
+  7. Saved networks can be viewed and deleted;
+  8. Screen dims after 60s idle; any key restores it;
+  9. After 5min idle, shows the sleep notice then enters deep sleep;
+  10. G0 wakes the device and WiFi reconnects automatically.
 
-## 8. 范围外（明确不做）
+## 8. Out of Scope
 
-OTA 升级、蓝牙、多语言切换、SD 卡、声音、密码加密存储、任意键深睡唤醒（硬件矩阵限制，用 G0 代替）。
+OTA updates, Bluetooth, language switching, SD card, sound, encrypted credential storage, any-key deep-sleep wake (keyboard matrix hardware limitation — G0 instead).
 
-## 9. 已知风险
+## 9. Known Risks
 
-- 设备当前未在 `/dev/cu.*` 出现，烧录前需确认 USB 连接/驱动；
-- 电池电压 ADC 估算精度有限，电量图标仅供参考；
-- M5Cardputer 库的键盘映射细节（`;`/`.` 方向键约定）以实际验证为准。
+- The device does not currently show up under `/dev/cu.*`; verify the USB connection/driver before flashing;
+- ADC-based battery estimation has limited accuracy; the battery icon is indicative only;
+- M5Cardputer library keyboard mapping details (the `;`/`.` arrow-key convention) to be verified on hardware.
