@@ -2,35 +2,36 @@
 
 #include "core/AppManager.h"
 #include "core/InputRouter.h"
+#include "ui/MenuList.h"
 #include "ui/StatusBar.h"
+#include "ui/Theme.h"
 
 namespace {
 
-// Temporary key-echo app, replaced by LauncherApp in a later task.
+// Temporary menu demo, replaced by LauncherApp in a later task.
 class EchoApp : public App {
  public:
   const char* title() const override { return "CardOS"; }
+  void onEnter() override {
+    menu_.setItems({{"WiFi Settings", "", 0},
+                    {"System Info", "", 0},
+                    {"中文条目测试", "ok", theme::kOk},
+                    {"Item 4", "", 0},
+                    {"Item 5", "", 0},
+                    {"Item 6", "", 0},
+                    {"Item 7", "", 0},
+                    {"Item 8", "", 0}});
+  }
   bool handleKey(const KeyEvent& ev) override {
-    last_ = ev;
-    requestRedraw();
-    return ev.code != KeyCode::Esc;  // keep Esc from popping the root
+    if (menu_.handleKey(ev)) { requestRedraw(); return true; }
+    return ev.code != KeyCode::Esc;
   }
   void render(M5Canvas& gfx) override {
-    gfx.setTextSize(2);
-    gfx.setTextColor(TFT_WHITE);
-    gfx.setCursor(10, 40);
-    switch (last_.code) {
-      case KeyCode::None: gfx.print("press a key"); break;
-      case KeyCode::Up: gfx.print("UP"); break;
-      case KeyCode::Down: gfx.print("DOWN"); break;
-      case KeyCode::Enter: gfx.print("ENTER"); break;
-      case KeyCode::Esc: gfx.print("ESC"); break;
-      case KeyCode::Backspace: gfx.print("BACKSPACE"); break;
-      default: gfx.printf("char: %c", last_.ch); break;
-    }
+    menu_.render(gfx, 0, theme::kStatusBarH, gfx.width(),
+                 gfx.height() - theme::kStatusBarH);
   }
  private:
-  KeyEvent last_;
+  MenuList menu_;
 };
 
 AppManager apps;
