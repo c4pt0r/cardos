@@ -122,8 +122,14 @@ bool WiFiApp::handleKey(const KeyEvent& ev) {
       int sel = menu_.selected();
       bool connected = wifi_.state() == WifiState::Connected;
       if (sel == 1) {  // Scan
-        wifi_.startScan();
-        toast("Scanning...", true, 0);
+        if (wifi_.busy()) {
+          // Boot auto-connect (or another scan) still in flight; don't
+          // show a spinner that nothing will ever dismiss.
+          toast("WiFi busy, try again", false, 1500);
+        } else {
+          wifi_.startScan();
+          toast("Scanning...", true, 0);
+        }
       } else if (sel == 2) {  // Saved
         showSaved();
       } else if (sel == 3 && connected) {  // Disconnect
@@ -191,7 +197,7 @@ void WiFiApp::update(uint32_t dtMs) {
         modal_ = Modal::None;
         bool wasAuthFail = wifi_.lastError() == WifiError::AuthFail;
         if (lastSeenState_ == WifiState::Failed && wasAuthFail &&
-            page_ != Page::Saved) {
+            page_ != Page::Saved && !targetSsid_.empty()) {
           page_ = Page::Password;  // wrong password -> retry input
           input_.reset("Password for " + targetSsid_ + ":");
         } else {
