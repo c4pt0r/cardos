@@ -17,9 +17,9 @@ bool PowerManager::onInput(uint32_t nowMs) {
   return swallow;
 }
 
-void PowerManager::tick(uint32_t nowMs) {
+bool PowerManager::tick(uint32_t nowMs) {
   IdleState s = policy_.state(nowMs);
-  if (s == applied_) return;
+  if (s == applied_) return false;
   applied_ = s;
   switch (s) {
     case IdleState::Active:
@@ -30,12 +30,14 @@ void PowerManager::tick(uint32_t nowMs) {
       break;
     case IdleState::SleepPending:
       showSleepNoticeAndSleep();
-      // Only reached if the user cancelled within the notice window.
+      // Only reached if the user cancelled within the notice window. The
+      // notice painted directly to the display, so the app must repaint.
       policy_.onInput(nowMs);
       applied_ = IdleState::Active;
       M5Cardputer.Display.setBrightness(kBrightActive);
-      break;
+      return true;
   }
+  return false;
 }
 
 void PowerManager::showSleepNoticeAndSleep() {

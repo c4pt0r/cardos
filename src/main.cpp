@@ -49,7 +49,7 @@ void loop() {
   uint32_t now = millis();
   wifiService.tick(now);
   power.keepAwake(wifiService.busy());
-  power.tick(now);
+  if (power.tick(now)) apps.requestRedraw();  // repaint after canceled notice
   for (const KeyEvent& ev : input.poll()) {
     if (!power.onInput(now)) apps.dispatch(ev);
   }

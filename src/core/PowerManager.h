@@ -17,8 +17,10 @@ class PowerManager {
   // if the key must be swallowed (it only woke the dimmed screen).
   bool onInput(uint32_t nowMs);
   void keepAwake(bool on) { policy_.keepAwake(on); }
-  // Call once per loop. May not return (deep sleep).
-  void tick(uint32_t nowMs);
+  // Call once per loop. May not return (deep sleep). Returns true when the
+  // sleep notice was shown and cancelled — it drew directly to the display,
+  // so the caller must force a full app repaint.
+  bool tick(uint32_t nowMs);
   static bool wokeFromDeepSleep();
 
  private:
