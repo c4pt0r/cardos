@@ -34,6 +34,10 @@ void WiFiService::tick(uint32_t nowMs) {
     state_ = WifiState::Failed;
     if (autoConnecting_) tryNextCandidate();
   }
+  if (advancePending_) {
+    advancePending_ = false;
+    tryNextCandidate();
+  }
 }
 
 void WiFiService::startScan() {
@@ -131,6 +135,7 @@ void WiFiService::autoConnect() {
 }
 
 void WiFiService::onGotIp() {
+  if (state_ != WifiState::Connecting) return;  // not ours (late/spurious)
   Serial.printf("[wifi] connected: %s ip=%s\n", pendingSsid_.c_str(),
                 WiFi.localIP().toString().c_str());
   state_ = WifiState::Connected;
@@ -150,13 +155,16 @@ void WiFiService::onDisconnected(uint8_t reason) {
   // 202 = AUTH_FAIL, 201 = NO_AP_FOUND (esp_wifi reason codes)
   Serial.printf("[wifi] connect failed: %s reason=%d\n", pendingSsid_.c_str(),
                 reason);
-  lastError_ = reason == 202 ? WifiError::AuthFail
+  // 202 AUTH_FAIL; 15/204 handshake timeouts — typical wrong-password
+  // symptoms on consumer APs. 201 NO_AP_FOUND.
+  lastError_ = (reason == 202 || reason == 15 || reason == 204)
+                   ? WifiError::AuthFail
              : reason == 201 ? WifiError::NoApFound
                              : WifiError::Other;
   WiFi.disconnect(true);
   WiFi.mode(WIFI_STA);
   state_ = WifiState::Failed;
-  if (autoConnecting_) tryNextCandidate();
+  if (autoConnecting_) advancePending_ = true;
 }
 
 std::string WiFiService::currentSsid() const {

@@ -46,6 +46,8 @@ class WiFiService {
  private:
   void onScanDone();
   void tryNextCandidate();
+  // Event handlers below run on the Arduino WiFi event task — must NOT mutate
+  // candidates_ directly; use advancePending_ to defer to tick() (loop task).
   void onGotIp();
   void onDisconnected(uint8_t reason);
 
@@ -53,7 +55,7 @@ class WiFiService {
   WifiState state_ = WifiState::Idle;
   WifiError lastError_ = WifiError::None;
   std::vector<ScanResult> results_;
-  bool scanJustFinished_ = false;
+  bool scanJustFinished_ = false;  // latch cleared by scanFinished(); shared by autoConnect()'s boot scan and the UI's manual scan — single consumer
 
   std::string pendingSsid_, pendingPw_;
   bool pendingSave_ = false;
@@ -61,6 +63,7 @@ class WiFiService {
   uint32_t nowMs_ = 0;
 
   bool autoConnecting_ = false;
+  volatile bool advancePending_ = false;  // set by event task, consumed by tick()
   std::vector<std::pair<std::string, std::string>> candidates_;  // ssid, pw
   size_t candidateIdx_ = 0;
 };
