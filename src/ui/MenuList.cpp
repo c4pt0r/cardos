@@ -32,11 +32,17 @@ void MenuList::render(M5Canvas& gfx, int x, int y, int w, int h) const {
     int ry = y + row * theme::kRowH;
     bool sel = idx == selected_;
     if (sel) gfx.fillRect(x, ry, w, theme::kRowH, theme::kAccent);
+    int nw = items_[idx].note.empty()
+                 ? 0
+                 : gfx.textWidth(items_[idx].note.c_str());
+    // Clip the label so long text (e.g. 32-char SSIDs) can't bleed into
+    // the right-aligned note.
+    gfx.setClipRect(x, ry, w - nw - 2 * theme::kPadX, theme::kRowH);
     gfx.setTextColor(sel ? TFT_BLACK : theme::kFg);
     gfx.setCursor(x + theme::kPadX, ry + 3);
     gfx.print(items_[idx].label.c_str());
-    if (!items_[idx].note.empty()) {
-      int nw = gfx.textWidth(items_[idx].note.c_str());
+    gfx.clearClipRect();
+    if (nw > 0) {
       gfx.setTextColor(sel ? TFT_BLACK : items_[idx].noteColor);
       gfx.setCursor(x + w - nw - theme::kPadX, ry + 3);
       gfx.print(items_[idx].note.c_str());
