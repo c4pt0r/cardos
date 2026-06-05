@@ -1,6 +1,7 @@
 #include <unity.h>
 #include "../../src/core/KeyEvent.h"
 #include "../../src/ui/scroll.h"
+#include "../../src/core/IdlePolicy.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -67,6 +68,47 @@ void test_scroll_clamps_bottom() {
   TEST_ASSERT_EQUAL(14, scrollFirstVisible(19, 20, 6));  // 20 - 6 = 14
 }
 
+void test_idle_starts_active() {
+  IdlePolicy p(60000, 300000);
+  TEST_ASSERT_EQUAL((int)IdleState::Active, (int)p.state(0));
+}
+
+void test_idle_dims_after_dim_timeout() {
+  IdlePolicy p(60000, 300000);
+  p.onInput(1000);
+  TEST_ASSERT_EQUAL((int)IdleState::Active, (int)p.state(60999));
+  TEST_ASSERT_EQUAL((int)IdleState::Dimmed, (int)p.state(61000));
+}
+
+void test_idle_sleeps_after_sleep_timeout() {
+  IdlePolicy p(60000, 300000);
+  p.onInput(1000);
+  TEST_ASSERT_EQUAL((int)IdleState::SleepPending, (int)p.state(301000));
+}
+
+void test_input_resets_timer() {
+  IdlePolicy p(60000, 300000);
+  p.onInput(1000);
+  p.onInput(200000);
+  TEST_ASSERT_EQUAL((int)IdleState::Active, (int)p.state(259999));
+}
+
+void test_wake_input_is_swallowed_when_dimmed() {
+  IdlePolicy p(60000, 300000);
+  p.onInput(0);
+  TEST_ASSERT_TRUE(p.onInput(61000));    // dimmed -> swallow this key
+  TEST_ASSERT_FALSE(p.onInput(62000));   // active again -> forward
+}
+
+void test_keep_awake_suppresses_sleep_not_dim() {
+  IdlePolicy p(60000, 300000);
+  p.onInput(0);
+  p.keepAwake(true);
+  TEST_ASSERT_EQUAL((int)IdleState::Dimmed, (int)p.state(301000));
+  p.keepAwake(false);
+  TEST_ASSERT_EQUAL((int)IdleState::SleepPending, (int)p.state(301000));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -81,5 +123,11 @@ int main(int, char**) {
   RUN_TEST(test_scroll_centers_selection);
   RUN_TEST(test_scroll_clamps_top);
   RUN_TEST(test_scroll_clamps_bottom);
+  RUN_TEST(test_idle_starts_active);
+  RUN_TEST(test_idle_dims_after_dim_timeout);
+  RUN_TEST(test_idle_sleeps_after_sleep_timeout);
+  RUN_TEST(test_input_resets_timer);
+  RUN_TEST(test_wake_input_is_swallowed_when_dimmed);
+  RUN_TEST(test_keep_awake_suppresses_sleep_not_dim);
   return UNITY_END();
 }
