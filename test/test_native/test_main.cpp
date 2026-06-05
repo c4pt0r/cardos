@@ -1,5 +1,6 @@
 #include <unity.h>
 #include "../../src/core/KeyEvent.h"
+#include "../../src/ui/scroll.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -49,6 +50,23 @@ void test_null_char_maps_to_none() {
   TEST_ASSERT_EQUAL((int)KeyCode::None, (int)ev.code);
 }
 
+void test_scroll_fits_on_one_page() {
+  TEST_ASSERT_EQUAL(0, scrollFirstVisible(3, 4, 6));  // 4 items, 6 visible
+}
+
+void test_scroll_centers_selection() {
+  // 20 items, 6 visible, selected 10 -> window starts at 10 - 3 = 7
+  TEST_ASSERT_EQUAL(7, scrollFirstVisible(10, 20, 6));
+}
+
+void test_scroll_clamps_top() {
+  TEST_ASSERT_EQUAL(0, scrollFirstVisible(1, 20, 6));
+}
+
+void test_scroll_clamps_bottom() {
+  TEST_ASSERT_EQUAL(14, scrollFirstVisible(19, 20, 6));  // 20 - 6 = 14
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -59,5 +77,9 @@ int main(int, char**) {
   RUN_TEST(test_fn_flag_passthrough);
   RUN_TEST(test_nav_keys_left_right);
   RUN_TEST(test_null_char_maps_to_none);
+  RUN_TEST(test_scroll_fits_on_one_page);
+  RUN_TEST(test_scroll_centers_selection);
+  RUN_TEST(test_scroll_clamps_top);
+  RUN_TEST(test_scroll_clamps_bottom);
   return UNITY_END();
 }
