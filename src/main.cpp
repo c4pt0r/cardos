@@ -1,5 +1,6 @@
 #include <M5Cardputer.h>
 
+#include "apps/HttpDemoApp.h"
 #include "apps/LauncherApp.h"
 #include "apps/SysInfoApp.h"
 #include "apps/WiFiApp.h"
@@ -19,6 +20,7 @@ NvsStorage nvs;
 WiFiStore wifiStore(nvs);
 WiFiService wifiService;
 WiFiApp wifiApp(wifiService, wifiStore);
+HttpDemoApp httpDemo;
 PowerManager power;
 uint32_t lastMs = 0;
 }  // namespace
@@ -38,6 +40,7 @@ void setup() {
   wifiService.begin(&wifiStore);
   wifiService.autoConnect();
   launcher.addEntry("WiFi Settings", &wifiApp);
+  launcher.addEntry("HTTP Demo", &httpDemo);
   launcher.addEntry("System Info", &sysinfo);
   apps.begin(M5Cardputer.Display, statusbar::paint);
   apps.push(&launcher);
