@@ -2,8 +2,11 @@
 
 #include "apps/LauncherApp.h"
 #include "apps/SysInfoApp.h"
+#include "apps/WiFiApp.h"
 #include "core/AppManager.h"
 #include "core/InputRouter.h"
+#include "services/NvsStorage.h"
+#include "services/WiFiService.h"
 #include "ui/StatusBar.h"
 
 namespace {
@@ -11,6 +14,10 @@ AppManager apps;
 InputRouter input;
 LauncherApp launcher;
 SysInfoApp sysinfo;
+NvsStorage nvs;
+WiFiStore wifiStore(nvs);
+WiFiService wifiService;
+WiFiApp wifiApp(wifiService, wifiStore);
 uint32_t lastMs = 0;
 }  // namespace
 
@@ -22,6 +29,9 @@ void setup() {
   Serial.begin(115200);
   Serial.println("[cardos] boot");
 
+  wifiStore.load();
+  wifiService.begin(&wifiStore);
+  launcher.addEntry("WiFi Settings", &wifiApp);
   launcher.addEntry("System Info", &sysinfo);
   apps.begin(M5Cardputer.Display, statusbar::paint);
   apps.push(&launcher);
@@ -31,13 +41,24 @@ void setup() {
 void loop() {
   M5Cardputer.update();
   uint32_t now = millis();
+  wifiService.tick(now);
   for (const KeyEvent& ev : input.poll()) apps.dispatch(ev);
   apps.update(now - lastMs);
 
-  static uint32_t lastBatteryMs = 0;
-  if (now - lastBatteryMs > 5000) {
-    lastBatteryMs = now;
+  static uint32_t lastStatusMs = 0;
+  if (now - lastStatusMs > 2000) {
+    lastStatusMs = now;
     statusbar::setBattery(M5Cardputer.Power.getBatteryLevel());
+    if (wifiService.state() == WifiState::Connected) {
+      int r = wifiService.rssi();
+      statusbar::setWifi(r >= -55 ? statusbar::WifiIcon::Bars3
+                         : r >= -70 ? statusbar::WifiIcon::Bars2
+                                    : statusbar::WifiIcon::Bars1);
+    } else if (wifiService.busy()) {
+      statusbar::setWifi(statusbar::WifiIcon::Connecting);
+    } else {
+      statusbar::setWifi(statusbar::WifiIcon::Off);
+    }
   }
   if (statusbar::changedSinceLastPaint()) apps.requestRedraw();
 
