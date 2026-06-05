@@ -2,6 +2,7 @@
 
 #include "core/AppManager.h"
 #include "core/InputRouter.h"
+#include "ui/StatusBar.h"
 
 namespace {
 
@@ -32,13 +33,6 @@ class EchoApp : public App {
   KeyEvent last_;
 };
 
-void paintStatusBar(M5Canvas& gfx, const char* title) {
-  gfx.fillRect(0, 0, gfx.width(), 16, TFT_NAVY);
-  gfx.setTextSize(1);
-  gfx.setTextColor(TFT_WHITE);
-  gfx.setCursor(4, 4);
-  gfx.print(title);
-}
 
 AppManager apps;
 InputRouter input;
@@ -54,7 +48,7 @@ void setup() {
   M5Cardputer.Display.setBrightness(200);
   Serial.begin(115200);
   Serial.println("[cardos] boot");
-  apps.begin(M5Cardputer.Display, paintStatusBar);
+  apps.begin(M5Cardputer.Display, statusbar::paint);
   apps.push(&echo);
   lastMs = millis();
 }
@@ -64,6 +58,12 @@ void loop() {
   uint32_t now = millis();
   for (const KeyEvent& ev : input.poll()) apps.dispatch(ev);
   apps.update(now - lastMs);
+  static uint32_t lastBatteryMs = 0;
+  if (now - lastBatteryMs > 5000) {
+    lastBatteryMs = now;
+    statusbar::setBattery(M5Cardputer.Power.getBatteryLevel());
+  }
+  if (statusbar::changedSinceLastPaint()) apps.requestRedraw();
   apps.render();
   lastMs = now;
   delay(5);
