@@ -17,6 +17,7 @@ class ScriptApp : public App {
 
   const char* title() const override { return title_.c_str(); }
   void onEnter() override;
+  void onExit() override;
   bool handleKey(const KeyEvent& ev) override;
   void update(uint32_t dtMs) override;
   void render(M5Canvas& gfx) override;

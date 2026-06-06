@@ -1,5 +1,7 @@
 #include <unity.h>
 
+#include <fstream>
+#include <sstream>
 #include <string>
 
 #include "../../src/lua/Lua.h"
@@ -127,6 +129,67 @@ void test_lua_syntax_error_reported() {
   TEST_ASSERT_TRUE(r.error.size() > 0);
 }
 
+// Loads the shipped apps/audio.lua and drives its state machine with stub
+// cardos.* bindings (no hardware), verifying the record/stop/exit logic.
+void test_lua_audio_demo_script() {
+  std::ifstream f("apps/audio.lua");
+  if (!f) { TEST_IGNORE_MESSAGE("apps/audio.lua not reachable from test CWD"); }
+  std::stringstream ss; ss << f.rdbuf();
+  std::string src = ss.str();
+
+  Lua lua;
+  bool recording = false;
+  int startCalls = 0, stopCalls = 0;
+  double fakeLevel = 0.5;
+
+  auto tbl = std::make_shared<Table>();
+  auto set = [&](const char* n, NativeFn fn) {
+    tbl->set(Value::string(n), Value::makeNative(fn));
+  };
+  set("record_start", [&](Interp&, const ValueList&) -> ValueList {
+    recording = true; startCalls++; return {Value::boolean(true)};
+  });
+  set("record_stop", [&](Interp&, const ValueList&) -> ValueList {
+    recording = false; stopCalls++; return {};
+  });
+  set("level", [&](Interp&, const ValueList&) -> ValueList {
+    return {Value::number(fakeLevel)};
+  });
+  set("width", [](Interp&, const ValueList&) -> ValueList { return {Value::number(240)}; });
+  set("height", [](Interp&, const ValueList&) -> ValueList { return {Value::number(135)}; });
+  for (const char* n : {"text", "rect", "fillrect", "line", "redraw", "log"})
+    set(n, [](Interp&, const ValueList&) -> ValueList { return {}; });
+  for (const char* n : {"RED", "GREEN", "GRAY", "WHITE", "BLACK", "CYAN", "YELLOW", "ORANGE"})
+    tbl->set(Value::string(n), Value::number(0));
+  lua.setGlobal("cardos", Value::makeTable(tbl));
+
+  Lua::Result r = lua.run(src);
+  TEST_ASSERT_TRUE_MESSAGE(r.ok, r.error.c_str());
+  TEST_ASSERT_EQUAL_STRING("Audio (Lua)", lua.getGlobal("title").str.c_str());
+
+  ValueList out;
+  // press -> start recording
+  TEST_ASSERT_TRUE(lua.callGlobal("on_key",
+      {Value::string("char"), Value::string("a"), Value::string("press")}, &out).ok);
+  TEST_ASSERT_TRUE(recording);
+  TEST_ASSERT_EQUAL(1, startCalls);
+  // update + render while recording must not error
+  TEST_ASSERT_TRUE(lua.callGlobal("on_update", {Value::number(16)}).ok);
+  TEST_ASSERT_TRUE(lua.callGlobal("on_render", {}).ok);
+  // release -> stop
+  TEST_ASSERT_TRUE(lua.callGlobal("on_key",
+      {Value::string("char"), Value::string("a"), Value::string("release")}, &out).ok);
+  TEST_ASSERT_FALSE(recording);
+  TEST_ASSERT_EQUAL(1, stopCalls);
+  // esc returns falsey so the framework pops the app
+  TEST_ASSERT_TRUE(lua.callGlobal("on_key",
+      {Value::string("esc"), Value::string(""), Value::string("press")}, &out).ok);
+  TEST_ASSERT_FALSE(out.empty());
+  TEST_ASSERT_FALSE(out[0].truthy());
+  TEST_ASSERT_TRUE(lua.callGlobal("on_exit", {}).ok);
+  TEST_ASSERT_TRUE(lua.callGlobal("on_render", {}).ok);  // idle render
+}
+
 void test_crc32_vectors() {
   TEST_ASSERT_EQUAL_HEX32(0x00000000u, crc32::of(""));
   TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, crc32::of("123456789"));
@@ -174,4 +237,5 @@ void run_lua_tests() {
   RUN_TEST(test_lua_nan_key_rejected);
   RUN_TEST(test_lua_ipairs_nil_safe);
   RUN_TEST(test_lua_syntax_error_reported);
+  RUN_TEST(test_lua_audio_demo_script);
 }

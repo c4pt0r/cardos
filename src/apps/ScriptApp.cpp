@@ -164,6 +164,12 @@ void ScriptApp::onEnter() {
   if (!r.ok) fail("on_enter", r.error);
 }
 
+void ScriptApp::onExit() {
+  // Lets a script release resources (e.g. stop the mic) when popped.
+  if (errored_ || !lua_.hasFunction("on_exit")) return;
+  lua_.callGlobal("on_exit", {});
+}
+
 bool ScriptApp::handleKey(const KeyEvent& ev) {
   if (errored_) return false;  // let Esc pop a broken app
   if (!lua_.hasFunction("on_key")) return false;
