@@ -9,6 +9,7 @@
 #include "../../src/sdk/FsPath.h"
 #include "../../src/sdk/WavWriter.h"
 #include "../../src/sdk/Multipart.h"
+#include "../../src/ui/textwrap.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -327,6 +328,36 @@ void test_multipart_suffix() {
   TEST_ASSERT_EQUAL_STRING("\r\n--BNDRY--\r\n", s.c_str());
 }
 
+static int fakeMeasure(const std::string& s) { return (int)s.size() * 6; }
+
+void test_wrap_simple() {
+  auto lines = wrapText("hello world", 36, fakeMeasure);  // 6 chars/line
+  TEST_ASSERT_EQUAL(2, (int)lines.size());
+  TEST_ASSERT_EQUAL_STRING("hello ", lines[0].c_str());
+  TEST_ASSERT_EQUAL_STRING("world", lines[1].c_str());
+}
+
+void test_wrap_honors_newlines() {
+  auto lines = wrapText("ab\ncd", 600, fakeMeasure);
+  TEST_ASSERT_EQUAL(2, (int)lines.size());
+  TEST_ASSERT_EQUAL_STRING("ab", lines[0].c_str());
+  TEST_ASSERT_EQUAL_STRING("cd", lines[1].c_str());
+}
+
+void test_wrap_utf8_not_split() {
+  // "中" is 3 bytes; width 18px per glyph under fakeMeasure. Width 20
+  // fits exactly one glyph per line — multibyte sequences must not be cut.
+  auto lines = wrapText("中文", 20, fakeMeasure);
+  TEST_ASSERT_EQUAL(2, (int)lines.size());
+  TEST_ASSERT_EQUAL_STRING("中", lines[0].c_str());
+  TEST_ASSERT_EQUAL_STRING("文", lines[1].c_str());
+}
+
+void test_wrap_empty() {
+  auto lines = wrapText("", 100, fakeMeasure);
+  TEST_ASSERT_EQUAL(0, (int)lines.size());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -366,5 +397,9 @@ int main(int, char**) {
   RUN_TEST(test_wav_writer_roundtrip);
   RUN_TEST(test_multipart_prefix);
   RUN_TEST(test_multipart_suffix);
+  RUN_TEST(test_wrap_simple);
+  RUN_TEST(test_wrap_honors_newlines);
+  RUN_TEST(test_wrap_utf8_not_split);
+  RUN_TEST(test_wrap_empty);
   return UNITY_END();
 }
