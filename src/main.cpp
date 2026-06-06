@@ -8,6 +8,7 @@
 #include "core/InputRouter.h"
 #include "core/PowerManager.h"
 #include "services/NvsStorage.h"
+#include "sdk/Audio.h"
 #include "sdk/Fs.h"
 #include "services/WiFiService.h"
 #include "ui/StatusBar.h"
@@ -53,6 +54,7 @@ void loop() {
   M5Cardputer.update();
   uint32_t now = millis();
   wifiService.tick(now);
+  cardos::audio::tick();
   power.keepAwake(wifiService.busy());
   if (power.tick(now)) apps.requestRedraw();  // repaint after canceled notice
   for (const KeyEvent& ev : input.poll()) {
