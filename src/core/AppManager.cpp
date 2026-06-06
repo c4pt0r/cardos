@@ -25,7 +25,9 @@ void AppManager::pop() {
 void AppManager::dispatch(const KeyEvent& ev) {
   App* app = top();
   if (!app) return;
-  if (!app->handleKey(ev) && ev.code == KeyCode::Esc) pop();
+  if (!app->handleKey(ev) && ev.code == KeyCode::Esc &&
+      ev.action == KeyAction::Press)
+    pop();
 }
 
 void AppManager::update(uint32_t dtMs) {

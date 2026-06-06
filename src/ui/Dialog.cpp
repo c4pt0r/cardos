@@ -42,6 +42,7 @@ void ConfirmDialog::reset(const std::string& msg, const std::string& first,
 }
 
 ConfirmDialog::Result ConfirmDialog::handleKey(const KeyEvent& ev) {
+  if (ev.action != KeyAction::Press) return Result::None;
   switch (ev.code) {
     case KeyCode::Left:
     case KeyCode::Right:

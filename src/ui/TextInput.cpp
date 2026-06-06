@@ -9,6 +9,7 @@ void TextInput::reset(const std::string& prompt) {
 }
 
 TextInput::Result TextInput::handleKey(const KeyEvent& ev) {
+  if (ev.action != KeyAction::Press) return Result::None;
   switch (ev.code) {
     case KeyCode::Enter:
       return Result::Submit;

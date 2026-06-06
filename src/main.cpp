@@ -2,12 +2,16 @@
 
 #include "apps/HttpDemoApp.h"
 #include "apps/LauncherApp.h"
+#include "apps/RecorderApp.h"
+#include "apps/VoiceMemoApp.h"
 #include "apps/SysInfoApp.h"
 #include "apps/WiFiApp.h"
 #include "core/AppManager.h"
 #include "core/InputRouter.h"
 #include "core/PowerManager.h"
 #include "services/NvsStorage.h"
+#include "sdk/Audio.h"
+#include "sdk/Fs.h"
 #include "services/WiFiService.h"
 #include "ui/StatusBar.h"
 
@@ -21,6 +25,8 @@ WiFiStore wifiStore(nvs);
 WiFiService wifiService;
 WiFiApp wifiApp(wifiService, wifiStore);
 HttpDemoApp httpDemo;
+RecorderApp recorder;
+VoiceMemoApp voiceMemo;
 PowerManager power;
 uint32_t lastMs = 0;
 }  // namespace
@@ -35,12 +41,15 @@ void setup() {
   power.begin();
   if (PowerManager::wokeFromDeepSleep())
     Serial.println("[cardos] woke from deep sleep");
+  cardos::fs::begin();
 
   wifiStore.load();
   wifiService.begin(&wifiStore);
   wifiService.autoConnect();
   launcher.addEntry("WiFi Settings", &wifiApp);
   launcher.addEntry("HTTP Demo", &httpDemo);
+  launcher.addEntry("Recorder", &recorder);
+  launcher.addEntry("Voice Memo", &voiceMemo);
   launcher.addEntry("System Info", &sysinfo);
   apps.begin(M5Cardputer.Display, statusbar::paint);
   apps.push(&launcher);
@@ -51,6 +60,7 @@ void loop() {
   M5Cardputer.update();
   uint32_t now = millis();
   wifiService.tick(now);
+  cardos::audio::tick();
   power.keepAwake(wifiService.busy());
   if (power.tick(now)) apps.requestRedraw();  // repaint after canceled notice
   for (const KeyEvent& ev : input.poll()) {

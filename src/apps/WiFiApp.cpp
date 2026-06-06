@@ -78,6 +78,7 @@ void WiFiApp::startConnect(const std::string& ssid, const std::string& pw,
 }
 
 bool WiFiApp::handleKey(const KeyEvent& ev) {
+  if (ev.action != KeyAction::Press) return true;  // ignore long-press/release
   // Modal layers swallow input first.
   if (modal_ == Modal::Toast) {
     if (ev.code == KeyCode::Esc && toastSpinner_) {

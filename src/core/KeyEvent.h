@@ -6,10 +6,14 @@ enum class KeyCode : uint8_t {
   None, Up, Down, Left, Right, Enter, Esc, Backspace, Tab, Char
 };
 
+// How the key transitioned this frame.
+enum class KeyAction : uint8_t { Press, LongPress, Release };
+
 struct KeyEvent {
   KeyCode code = KeyCode::None;
   char ch = 0;       // raw printable char (valid for Char and nav keys)
   bool fn = false;   // Fn modifier held
+  KeyAction action = KeyAction::Press;
 };
 
 // Map one raw key report to a semantic event. The M5Cardputer keyboard
