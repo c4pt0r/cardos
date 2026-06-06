@@ -59,6 +59,20 @@ tostring/tonumber`. **Not supported:** metatables, coroutines, varargs
 `...`, goto, Lua pattern matching, integer/float distinction, `io/os/
 require`.
 
+## Bundled examples
+
+The `apps/` directory ships ready-to-push scripts:
+
+| Script | Shows |
+|---|---|
+| `apps/hello.lua` | state + input + drawing (a counter) |
+| `apps/bounce.lua` | animation via `on_update` (a bouncing box) |
+| `apps/audio.lua` | the recorder demo: hold-to-record, live level meter, `on_exit` cleanup |
+
+```sh
+tools/cardos-app.py push apps/audio.lua && tools/cardos-app.py run audio.lua
+```
+
 ## Installing over serial
 
 `tools/cardos-app.py` (needs `pyserial`) speaks the device's
