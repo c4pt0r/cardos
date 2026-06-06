@@ -25,6 +25,7 @@ Docs: [design](docs/superpowers/specs/2026-06-05-cardos-design.md) ·
 | Recorder | Push-to-talk voice memos (hold Space), saved to /flash or /sd, multipart upload with progress |
 | Voice Memo | Hold any key to record, release to upload to a Cloudflare Worker (audio → R2, metadata → db9) |
 | Lua Apps | Lists and runs Lua scripts in `/flash/apps`, installed over serial — no reflashing |
+| App Uploader | Starts a local HTTP server (with QR code) to install Lua apps over WiFi from a browser |
 | System Info | SSID / IP / RSSI / heap / battery / uptime |
 
 ## Tech Stack

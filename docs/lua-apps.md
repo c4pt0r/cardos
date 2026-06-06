@@ -89,6 +89,26 @@ tools/cardos-app.py --selftest             # offline checks, no device
 The port is auto-detected (`/dev/cu.usbmodem*` etc.); override with
 `--port`. Files must end in `.lua` and are stored in `/flash/apps`.
 
+## Installing over WiFi (App Uploader)
+
+No USB cable needed once WiFi is connected. On the device, open
+**App Uploader** — it starts a small HTTP server and shows a URL + QR code.
+
+- Scan the QR code (or open `http://<device-ip>/`) to get a web page that
+  lists installed apps and has a file-upload form (and a delete link each).
+- Or use `curl`:
+
+```sh
+curl -F "app=@apps/hello.lua" http://<device-ip>/upload   # install
+curl http://<device-ip>/api/apps                          # list (JSON)
+curl "http://<device-ip>/delete?name=hello.lua"           # delete
+```
+
+The server runs only while the App Uploader screen is open (Esc stops it).
+Uploaded files are validated (`.lua`, no path escape) and stored in
+`/flash/apps`; run them from **Lua Apps**. Like the USB tool, the endpoint
+is unauthenticated — it trusts your local network.
+
 ## Limits / notes
 
 - The board has no PSRAM (320 KB RAM); keep app state small. One app runs

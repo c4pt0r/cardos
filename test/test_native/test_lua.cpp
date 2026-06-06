@@ -219,10 +219,20 @@ void test_serialproto_valid_name() {
   TEST_ASSERT_FALSE(serialproto::validAppName(".lua"));
 }
 
+void test_serialproto_upload_name() {
+  // strips any directory part of a multipart filename, then validates
+  TEST_ASSERT_EQUAL_STRING("hello.lua", serialproto::uploadName("hello.lua").c_str());
+  TEST_ASSERT_EQUAL_STRING("hello.lua", serialproto::uploadName("/tmp/a/hello.lua").c_str());
+  TEST_ASSERT_EQUAL_STRING("evil.lua", serialproto::uploadName("..\\evil.lua").c_str());
+  TEST_ASSERT_EQUAL_STRING("", serialproto::uploadName("evil.txt").c_str());
+  TEST_ASSERT_EQUAL_STRING("", serialproto::uploadName("..lua").c_str());
+}
+
 void run_lua_tests() {
   RUN_TEST(test_crc32_vectors);
   RUN_TEST(test_serialproto_parse);
   RUN_TEST(test_serialproto_valid_name);
+  RUN_TEST(test_serialproto_upload_name);
   RUN_TEST(test_lua_arithmetic);
   RUN_TEST(test_lua_strings);
   RUN_TEST(test_lua_locals_and_globals);

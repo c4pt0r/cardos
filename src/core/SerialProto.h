@@ -42,4 +42,13 @@ inline bool validAppName(const std::string& name) {
   return name.substr(name.size() - 4) == ".lua";
 }
 
+// Reduce an uploaded filename to a safe app name (strip any directory part,
+// then validate). Returns "" if unacceptable. Used by the HTTP uploader so a
+// crafted multipart filename can't escape /flash/apps.
+inline std::string uploadName(const std::string& filename) {
+  size_t s = filename.find_last_of("/\\");
+  std::string base = s == std::string::npos ? filename : filename.substr(s + 1);
+  return validAppName(base) ? base : std::string();
+}
+
 }  // namespace serialproto
