@@ -8,6 +8,7 @@
 #include "core/InputRouter.h"
 #include "core/PowerManager.h"
 #include "services/NvsStorage.h"
+#include "sdk/Fs.h"
 #include "services/WiFiService.h"
 #include "ui/StatusBar.h"
 
@@ -35,6 +36,7 @@ void setup() {
   power.begin();
   if (PowerManager::wokeFromDeepSleep())
     Serial.println("[cardos] woke from deep sleep");
+  cardos::fs::begin();
 
   wifiStore.load();
   wifiService.begin(&wifiStore);

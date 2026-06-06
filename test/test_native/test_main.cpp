@@ -4,6 +4,7 @@
 #include "../../src/ui/scroll.h"
 #include "../../src/core/IdlePolicy.h"
 #include "../../src/services/WiFiStore.h"
+#include "../../src/sdk/FsPath.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -245,6 +246,27 @@ void test_tracker_overflow_ignored() {
   TEST_ASSERT_EQUAL(8, (int)e1.size());
 }
 
+void test_fspath_flash() {
+  std::string mount, rel;
+  TEST_ASSERT_TRUE(cardos::fs::splitPath("/flash/rec/a.wav", mount, rel));
+  TEST_ASSERT_EQUAL_STRING("/flash", mount.c_str());
+  TEST_ASSERT_EQUAL_STRING("/rec/a.wav", rel.c_str());
+}
+
+void test_fspath_sd_root() {
+  std::string mount, rel;
+  TEST_ASSERT_TRUE(cardos::fs::splitPath("/sd", mount, rel));
+  TEST_ASSERT_EQUAL_STRING("/sd", mount.c_str());
+  TEST_ASSERT_EQUAL_STRING("/", rel.c_str());
+}
+
+void test_fspath_invalid() {
+  std::string mount, rel;
+  TEST_ASSERT_FALSE(cardos::fs::splitPath("/nvs/x", mount, rel));
+  TEST_ASSERT_FALSE(cardos::fs::splitPath("flash/x", mount, rel));
+  TEST_ASSERT_FALSE(cardos::fs::splitPath("/flashy/x", mount, rel));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -277,5 +299,8 @@ int main(int, char**) {
   RUN_TEST(test_tracker_multiple_keys);
   RUN_TEST(test_tracker_special_ids);
   RUN_TEST(test_tracker_overflow_ignored);
+  RUN_TEST(test_fspath_flash);
+  RUN_TEST(test_fspath_sd_root);
+  RUN_TEST(test_fspath_invalid);
   return UNITY_END();
 }
