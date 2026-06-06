@@ -2,13 +2,16 @@
 
 #include "apps/HttpDemoApp.h"
 #include "apps/LauncherApp.h"
+#include "apps/LuaAppsApp.h"
 #include "apps/RecorderApp.h"
+#include "apps/ScriptHost.h"
 #include "apps/VoiceMemoApp.h"
 #include "apps/SysInfoApp.h"
 #include "apps/WiFiApp.h"
 #include "core/AppManager.h"
 #include "core/InputRouter.h"
 #include "core/PowerManager.h"
+#include "core/SerialControl.h"
 #include "services/NvsStorage.h"
 #include "sdk/Audio.h"
 #include "sdk/Fs.h"
@@ -27,9 +30,15 @@ WiFiApp wifiApp(wifiService, wifiStore);
 HttpDemoApp httpDemo;
 RecorderApp recorder;
 VoiceMemoApp voiceMemo;
+ScriptHost scriptHost;
+LuaAppsApp luaApps(scriptHost);
+SerialControl serialControl;
 PowerManager power;
 uint32_t lastMs = 0;
 }  // namespace
+
+// The Lua interpreter recurses on the loop task; give it a roomier stack.
+SET_LOOP_TASK_STACK_SIZE(16 * 1024);
 
 void setup() {
   auto cfg = M5.config();
@@ -50,7 +59,10 @@ void setup() {
   launcher.addEntry("HTTP Demo", &httpDemo);
   launcher.addEntry("Recorder", &recorder);
   launcher.addEntry("Voice Memo", &voiceMemo);
+  launcher.addEntry("Lua Apps", &luaApps);
   launcher.addEntry("System Info", &sysinfo);
+  scriptHost.begin(&apps);
+  serialControl.begin(&scriptHost);
   apps.begin(M5Cardputer.Display, statusbar::paint);
   apps.push(&launcher);
   lastMs = millis();
@@ -58,6 +70,7 @@ void setup() {
 
 void loop() {
   M5Cardputer.update();
+  serialControl.tick();  // host app-management over USB serial
   uint32_t now = millis();
   wifiService.tick(now);
   cardos::audio::tick();

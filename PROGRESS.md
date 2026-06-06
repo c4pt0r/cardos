@@ -9,7 +9,8 @@ Last updated: 2026-06-06
 | MVP (launcher + WiFi + power management) | ✅ Merged to `main`, running on hardware |
 | HTTP Demo app | ✅ Merged to `main`, verified on hardware |
 | App SDK | 🚧 On branch `sdk` — code complete (tasks 1–9); pending on-device acceptance + merge (task 10) |
-| Voice Memo app + cardos-voice backend | 🚧 On branch `sdk` — code complete, backend deployed + verified; device flash pending |
+| Voice Memo app + cardos-voice backend | ✅ Merged to `main`; backend deployed + verified; device flash pending |
+| Lua app loader + serial install tool | 🚧 On branch `lua-apps` — interpreter + runtime + tool complete; device flash pending |
 
 ## Done
 
@@ -75,6 +76,26 @@ Spec: `docs/superpowers/specs/2026-06-06-voice-memo-design.md`
 - **Deferred to hardware**: flash firmware, hold a key to record on the
   Cardputer, confirm a real memo lands in R2 + db9 (`db9 sql cardos_voice
   -q "SELECT * FROM recordings"`).
+
+## Lua app loader + serial install (branch `lua-apps`)
+
+Spec: `docs/superpowers/specs/2026-06-06-lua-apps-design.md`;
+guide: `docs/lua-apps.md`.
+
+- **Interpreter** `src/lua/` — from-scratch Lua-subset (Value/Lexer/Parser/
+  Interp/Lua facade), pure C++17, **native-tested** (closures, tables,
+  pairs/ipairs, multi-return, pcall, stdlib). ~97 KB flash.
+- **Runtime** `src/apps/ScriptApp` runs a `.lua` file as an App with a
+  `cardos.*` binding surface; `ScriptHost` owns launched apps;
+  `LuaAppsApp` lists/launches `/flash/apps/*.lua`.
+- **Serial** `src/core/SerialControl` — PING/LIST/PUT(crc32)/DEL/RUN over
+  USB CDC; `crc32` + `SerialProto` parser pure + native-tested.
+- **Tool** `tools/cardos-app.py` push/list/rm/run (autodetect, `--selftest`).
+- **Examples** `apps/hello.lua`, `apps/bounce.lua`.
+- **Status**: 56/56 native tests; firmware builds (60.7% flash); Python
+  selftest passes.
+- **Deferred to hardware**: `push`→`run` over USB, on-screen Lua app, live
+  RAM headroom of a `lua_State`.
 
 ## Upcoming Plan
 
