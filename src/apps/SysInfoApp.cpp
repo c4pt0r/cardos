@@ -1,5 +1,6 @@
 #include "SysInfoApp.h"
 
+#include <LittleFS.h>
 #include <M5Cardputer.h>
 #include <WiFi.h>
 
@@ -30,6 +31,9 @@ void SysInfoApp::render(M5Canvas& gfx) {
   line("IP:      ", up ? WiFi.localIP().toString() : String("-"));
   line("RSSI:    ", up ? String(WiFi.RSSI()) + " dBm" : String("-"));
   line("Heap:    ", String(ESP.getFreeHeap() / 1024) + " KB free");
+  uint32_t fsTotal = LittleFS.totalBytes() / 1024;
+  uint32_t fsFree = fsTotal - LittleFS.usedBytes() / 1024;
+  line("Flash:   ", String(fsFree) + "/" + String(fsTotal) + " KB free");
   line("Battery: ", String(M5Cardputer.Power.getBatteryLevel()) + " %");
   line("Uptime:  ", String(millis() / 1000) + " s");
 }
