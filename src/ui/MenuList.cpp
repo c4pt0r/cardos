@@ -13,6 +13,7 @@ void MenuList::setSelected(int idx) {
 }
 
 bool MenuList::handleKey(const KeyEvent& ev) {
+  if (ev.action != KeyAction::Press) return false;
   if (items_.empty()) return false;
   if (ev.code == KeyCode::Up && selected_ > 0) { selected_--; return true; }
   if (ev.code == KeyCode::Down && selected_ < (int)items_.size() - 1) {

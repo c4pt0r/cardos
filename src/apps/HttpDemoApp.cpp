@@ -28,6 +28,7 @@ void HttpDemoApp::onEnter() {
 }
 
 bool HttpDemoApp::handleKey(const KeyEvent& ev) {
+  if (ev.action != KeyAction::Press) return true;
   if (!pendingUrl_.empty()) return true;  // ignore keys mid-request
   if (menu_.handleKey(ev)) { requestRedraw(); return true; }
   if (ev.code == KeyCode::Enter) {

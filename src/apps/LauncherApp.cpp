@@ -17,6 +17,7 @@ void LauncherApp::rebuild() {
 }
 
 bool LauncherApp::handleKey(const KeyEvent& ev) {
+  if (ev.action != KeyAction::Press) return true;
   if (menu_.handleKey(ev)) { requestRedraw(); return true; }
   if (ev.code == KeyCode::Enter && !entries_.empty()) {
     mgr_->push(entries_[menu_.selected()].second);
