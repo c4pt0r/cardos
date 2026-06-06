@@ -3,7 +3,7 @@
 #include "../ui/Theme.h"
 
 void LuaAppsApp::onEnter() {
-  host_.clearOwned();  // safe: we are back at root, no script app is stacked
+  host_.pruneDetached();  // reclaim apps the user has exited
   files_ = host_.listFiles();
   std::vector<MenuItem> items;
   for (const auto& f : files_) items.push_back({f, "", theme::kMuted});

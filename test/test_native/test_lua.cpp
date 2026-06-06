@@ -106,6 +106,20 @@ void test_lua_callglobal_app_callback() {
   TEST_ASSERT_TRUE(out[0].truthy());
 }
 
+void test_lua_nan_key_rejected() {
+  // A NaN table key must not corrupt the std::map; it surfaces as an error.
+  Lua lua;
+  Lua::Result r = lua.run("local t={} t[0/0]=1");
+  TEST_ASSERT_FALSE(r.ok);
+}
+
+void test_lua_ipairs_nil_safe() {
+  // ipairs over a non-table must error cleanly, not crash.
+  Lua lua;
+  Lua::Result r = lua.run("for _,v in ipairs(nil) do end");
+  TEST_ASSERT_FALSE(r.ok);
+}
+
 void test_lua_syntax_error_reported() {
   Lua lua;
   Lua::Result r = lua.run("local = ");
@@ -157,5 +171,7 @@ void run_lua_tests() {
   RUN_TEST(test_lua_pcall_error);
   RUN_TEST(test_lua_native_binding);
   RUN_TEST(test_lua_callglobal_app_callback);
+  RUN_TEST(test_lua_nan_key_rejected);
+  RUN_TEST(test_lua_ipairs_nil_safe);
   RUN_TEST(test_lua_syntax_error_reported);
 }

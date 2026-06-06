@@ -30,6 +30,12 @@ void AppManager::dispatch(const KeyEvent& ev) {
     pop();
 }
 
+bool AppManager::onStack(App* app) const {
+  for (App* a : stack_)
+    if (a == app) return true;
+  return false;
+}
+
 void AppManager::update(uint32_t dtMs) {
   if (App* app = top()) app->update(dtMs);
 }

@@ -53,14 +53,14 @@ void SerialControl::handleLine(const std::string& line) {
     }
     reply("END");
   } else if (v == "DEL") {
-    if (a.empty() || !serialproto::validAppName(a[0])) { reply("ERR bad name"); return; }
+    if (a.size() != 1 || !serialproto::validAppName(a[0])) { reply("ERR bad name"); return; }
     reply(cardos::fs::remove(appPath(a[0])) ? "OK" : "ERR delete failed");
   } else if (v == "RUN") {
-    if (a.empty() || !serialproto::validAppName(a[0])) { reply("ERR bad name"); return; }
+    if (a.size() != 1 || !serialproto::validAppName(a[0])) { reply("ERR bad name"); return; }
     if (!cardos::fs::exists(appPath(a[0]))) { reply("ERR no such app"); return; }
     reply(host_ && host_->launch(a[0]) ? "OK" : "ERR launch failed");
   } else if (v == "PUT") {
-    if (a.size() < 3) { reply("ERR usage: PUT <name> <size> <crc32hex>"); return; }
+    if (a.size() != 3) { reply("ERR usage: PUT <name> <size> <crc32hex>"); return; }
     if (!serialproto::validAppName(a[0])) { reply("ERR bad name"); return; }
     size_t size = (size_t)strtoul(a[1].c_str(), nullptr, 10);
     uint32_t crc = (uint32_t)strtoul(a[2].c_str(), nullptr, 16);
@@ -77,6 +77,7 @@ void SerialControl::doPut(const std::string& name, size_t size, uint32_t expectC
   data.reserve(size);
   uint8_t buf[256];
   uint32_t lastByte = millis();
+  bool timedOut = false;
   while (data.size() < size) {
     size_t want = size - data.size();
     size_t got = Serial.readBytes(buf, want < sizeof(buf) ? want : sizeof(buf));
@@ -84,16 +85,27 @@ void SerialControl::doPut(const std::string& name, size_t size, uint32_t expectC
       data.append(reinterpret_cast<char*>(buf), got);
       lastByte = millis();
     } else if (millis() - lastByte > 8000) {
-      reply("ERR timeout");
-      return;
+      timedOut = true;
+      break;
     }
   }
-  uint32_t crc = crc32::of(data);
-  if (crc != expectCrc) {
+
+  std::string result;
+  if (timedOut) {
+    result = "ERR timeout";
+  } else if (crc32::of(data) != expectCrc) {
     char msg[48];
-    snprintf(msg, sizeof(msg), "ERR crc mismatch got %08x", (unsigned)crc);
-    reply(msg);
-    return;
+    snprintf(msg, sizeof(msg), "ERR crc mismatch got %08x", (unsigned)crc32::of(data));
+    result = msg;
+  } else {
+    result = cardos::fs::writeFile(appPath(name), data) ? "OK" : "ERR write failed";
   }
-  reply(cardos::fs::writeFile(appPath(name), data) ? "OK" : "ERR write failed");
+
+  // Drain any surplus bytes (over-send or an aborted transfer) so they are
+  // never re-interpreted as the next command; bounded so a misbehaving host
+  // can't pin the loop. Then reset the line buffer.
+  uint32_t drainStart = millis();
+  while (Serial.available() > 0 && millis() - drainStart < 500) Serial.read();
+  line_.clear();
+  reply(result);
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -110,6 +111,9 @@ struct Table {
   }
   void set(const Value& key, const Value& val) {
     if (key.isNil()) return;
+    // A NaN key would break the std::map ordering invariant (NaN compares
+    // false both ways) — drop it. setIndex() reports this as an error.
+    if (key.type == Type::Number && std::isnan(key.num)) return;
     if (val.isNil()) entries.erase(key);
     else entries[key] = val;
   }

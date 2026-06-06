@@ -57,6 +57,8 @@ void Interp::setIndex(const Value& obj, const Value& key, const Value& val, int 
   if (obj.type != Type::Table)
     error(std::string("attempt to index a ") + obj.typeName() + " value", line);
   if (key.isNil()) error("table index is nil", line);
+  if (key.type == Type::Number && std::isnan(key.num))
+    error("table index is NaN", line);
   obj.table->set(key, val);
 }
 

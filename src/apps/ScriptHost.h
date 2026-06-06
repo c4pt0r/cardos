@@ -18,7 +18,7 @@ class ScriptHost {
 
   std::vector<std::string> listFiles();    // "*.lua" filenames, sorted
   bool launch(const std::string& name);    // construct + push (takes ownership)
-  void clearOwned();                       // free popped apps; call only at root
+  void pruneDetached();                    // free owned apps no longer on the stack
 
  private:
   AppManager* apps_ = nullptr;

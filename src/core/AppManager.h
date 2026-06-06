@@ -16,6 +16,7 @@ class AppManager {
   void push(App* app);   // apps are statically allocated; not owned
   void pop();
   App* top() const { return stack_.empty() ? nullptr : stack_.back(); }
+  bool onStack(App* app) const;  // is this app currently in the scene stack?
 
   void dispatch(const KeyEvent& ev);
   void update(uint32_t dtMs);

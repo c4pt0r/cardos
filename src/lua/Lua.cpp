@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 
 #include "Error.h"
 #include "Lexer.h"
@@ -250,8 +251,10 @@ Lua::Lua() {
     return {Value::makeNative(builtinNext), arg(a, 0), Value::nil()};
   });
   registerFn("ipairs", [](Interp& in, const ValueList& a) -> ValueList {
+    if (arg(a, 0).type != Type::Table) in.error("ipairs: expected table");
     NativeFn iter = [](Interp& in, const ValueList& a) -> ValueList {
       Value tv = arg(a, 0);
+      if (tv.type != Type::Table) in.error("ipairs: expected table");
       int i = (int)arg(a, 1).num + 1;
       Value v = tv.table->get(Value::number(i));
       if (v.isNil()) return {Value::nil()};
