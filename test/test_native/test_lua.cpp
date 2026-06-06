@@ -3,6 +3,8 @@
 #include <string>
 
 #include "../../src/lua/Lua.h"
+#include "../../src/core/crc32.h"
+#include "../../src/core/SerialProto.h"
 
 using namespace minlua;
 
@@ -111,7 +113,39 @@ void test_lua_syntax_error_reported() {
   TEST_ASSERT_TRUE(r.error.size() > 0);
 }
 
+void test_crc32_vectors() {
+  TEST_ASSERT_EQUAL_HEX32(0x00000000u, crc32::of(""));
+  TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, crc32::of("123456789"));
+  TEST_ASSERT_EQUAL_HEX32(0x414FA339u, crc32::of("The quick brown fox jumps over the lazy dog"));
+}
+
+void test_serialproto_parse() {
+  auto c = serialproto::parse("put hello.lua 128 cbf43926");
+  TEST_ASSERT_EQUAL_STRING("PUT", c.verb.c_str());
+  TEST_ASSERT_EQUAL(3, (int)c.args.size());
+  TEST_ASSERT_EQUAL_STRING("hello.lua", c.args[0].c_str());
+  TEST_ASSERT_EQUAL_STRING("128", c.args[1].c_str());
+
+  auto e = serialproto::parse("   \t  ");
+  TEST_ASSERT_TRUE(e.empty());
+
+  auto p = serialproto::parse("PING");
+  TEST_ASSERT_EQUAL_STRING("PING", p.verb.c_str());
+  TEST_ASSERT_EQUAL(0, (int)p.args.size());
+}
+
+void test_serialproto_valid_name() {
+  TEST_ASSERT_TRUE(serialproto::validAppName("hello.lua"));
+  TEST_ASSERT_FALSE(serialproto::validAppName("hello.txt"));
+  TEST_ASSERT_FALSE(serialproto::validAppName("../etc/x.lua"));
+  TEST_ASSERT_FALSE(serialproto::validAppName("a/b.lua"));
+  TEST_ASSERT_FALSE(serialproto::validAppName(".lua"));
+}
+
 void run_lua_tests() {
+  RUN_TEST(test_crc32_vectors);
+  RUN_TEST(test_serialproto_parse);
+  RUN_TEST(test_serialproto_valid_name);
   RUN_TEST(test_lua_arithmetic);
   RUN_TEST(test_lua_strings);
   RUN_TEST(test_lua_locals_and_globals);
