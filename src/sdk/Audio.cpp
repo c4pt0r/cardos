@@ -16,9 +16,9 @@ WavWriter wav_;
 float level_ = 0.f;
 
 void processChunk(const int16_t* s, size_t n) {
-  int16_t peak = 0;
+  int32_t peak = 0;
   for (size_t i = 0; i < n; i++) {
-    int16_t v = s[i] < 0 ? -s[i] : s[i];
+    int32_t v = s[i] < 0 ? -(int32_t)s[i] : s[i];  // int32: -INT16_MIN is safe
     if (v > peak) peak = v;
   }
   level_ = peak / 32768.0f;
@@ -39,7 +39,10 @@ bool start(uint32_t sampleRate, ChunkCallback cb) {
   recording_ = true;
   cur_ = 0;
   level_ = 0.f;
-  M5Cardputer.Mic.record(buf_[cur_], kChunk, rate_);  // prime first buffer
+  // Prime BOTH queue slots so the mic is always capturing into one buffer
+  // while we drain the other — true ping-pong, no gap at chunk boundaries.
+  M5Cardputer.Mic.record(buf_[0], kChunk, rate_);
+  M5Cardputer.Mic.record(buf_[1], kChunk, rate_);
   Serial.printf("[audio] recording @%u Hz\n", (unsigned)rate_);
   return true;
 }
@@ -60,13 +63,15 @@ bool startToWav(const std::string& path, uint32_t sampleRate) {
 
 void tick() {
   if (!recording_) return;
-  // When the in-flight buffer completes, queue the other one and process
-  // the finished data.
-  if (!M5Cardputer.Mic.isRecording()) {
-    int done = cur_;
-    cur_ ^= 1;
+  // isRecording() is the number of buffers still queued (0/1/2). Both slots
+  // are primed; when it drops below 2 the oldest (buf_[cur_]) is complete —
+  // process it and re-queue it behind the still-recording buffer.
+  // Bounded by 2 (only two buffers exist) so a failed record() can't spin
+  // the cooperative main loop.
+  for (int i = 0; i < 2 && M5Cardputer.Mic.isRecording() < 2; i++) {
+    processChunk(buf_[cur_], kChunk);
     M5Cardputer.Mic.record(buf_[cur_], kChunk, rate_);
-    processChunk(buf_[done], kChunk);
+    cur_ ^= 1;
   }
 }
 

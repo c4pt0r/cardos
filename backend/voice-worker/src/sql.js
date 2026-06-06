@@ -1,5 +1,8 @@
 // Pure SQL string builders for the recordings table. No I/O — unit-tested.
 // db9 has no parameterized HTTP SQL endpoint, so we escape values ourselves.
+// Safety rests on Postgres `standard_conforming_strings = on` (the default,
+// verified on the db9 instance): doubling single quotes fully contains any
+// string value, so backslashes are literal and cannot start an escape.
 
 // Escape a value as a SQL string literal (single quotes doubled).
 // null/undefined -> bare NULL.

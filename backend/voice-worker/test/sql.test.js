@@ -43,6 +43,30 @@ describe("buildInsertSql", () => {
     expect(sql).not.toContain(";"); // no statement breakout
   });
 
+  it("neutralizes an injection payload in a client field", () => {
+    // A malicious X-Device / filename trying to break out and run DDL.
+    const sql = buildInsertSql({
+      id: "33333333-3333-3333-3333-333333333333",
+      r2_key: "recordings/z.wav",
+      filename: "z.wav",
+      content_type: "audio/wav",
+      size_bytes: 10,
+      sample_rate: 16000,
+      device: "x'); DROP TABLE recordings; --",
+    });
+    // The payload's quote is doubled, so it stays inside one string literal.
+    expect(sql).toContain("'x''); DROP TABLE recordings; --'");
+    // The un-doubled breakout sequence `x');` must not survive escaping
+    // (it becomes `x'');`), so the literal is never closed early.
+    expect(sql.includes("x');")).toBe(false);
+  });
+
+  it("handles exponent/Infinity numeric strings safely", () => {
+    expect(sqlNum("1e9")).toBe("1000000000");
+    expect(sqlNum(Infinity)).toBe("NULL");
+    expect(sqlNum(-5)).toBe("-5");
+  });
+
   it("uses NULL for missing numeric fields", () => {
     const sql = buildInsertSql({
       id: "22222222-2222-2222-2222-222222222222",

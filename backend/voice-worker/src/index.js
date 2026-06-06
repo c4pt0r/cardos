@@ -27,6 +27,19 @@ export default {
   },
 };
 
+// Length-independent constant-time string compare (avoids leaking the key
+// via response timing). Returns false on length mismatch without early-exit
+// on content.
+function safeEqual(a, b) {
+  a = String(a);
+  b = String(b);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i % b.length || 0);
+  }
+  return diff === 0;
+}
+
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
@@ -53,7 +66,7 @@ async function db9(env, query) {
 }
 
 async function handleUpload(request, env) {
-  if ((request.headers.get("X-Upload-Key") || "") !== env.UPLOAD_KEY) {
+  if (!safeEqual(request.headers.get("X-Upload-Key") || "", env.UPLOAD_KEY)) {
     return json({ error: "unauthorized" }, 401);
   }
   const form = await request.formData();
