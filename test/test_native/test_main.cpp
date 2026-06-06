@@ -8,6 +8,7 @@
 #include "../../src/services/WiFiStore.h"
 #include "../../src/sdk/FsPath.h"
 #include "../../src/sdk/WavWriter.h"
+#include "../../src/sdk/Multipart.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -311,6 +312,21 @@ void test_wav_writer_roundtrip() {
   ::remove(path);
 }
 
+void test_multipart_prefix() {
+  std::string p = cardos::http::multipartPrefix("BNDRY", "file", "a.wav");
+  TEST_ASSERT_EQUAL_STRING(
+      "--BNDRY\r\n"
+      "Content-Disposition: form-data; name=\"file\"; filename=\"a.wav\"\r\n"
+      "Content-Type: application/octet-stream\r\n"
+      "\r\n",
+      p.c_str());
+}
+
+void test_multipart_suffix() {
+  std::string s = cardos::http::multipartSuffix("BNDRY");
+  TEST_ASSERT_EQUAL_STRING("\r\n--BNDRY--\r\n", s.c_str());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -348,5 +364,7 @@ int main(int, char**) {
   RUN_TEST(test_fspath_invalid);
   RUN_TEST(test_wav_header_fields);
   RUN_TEST(test_wav_writer_roundtrip);
+  RUN_TEST(test_multipart_prefix);
+  RUN_TEST(test_multipart_suffix);
   return UNITY_END();
 }

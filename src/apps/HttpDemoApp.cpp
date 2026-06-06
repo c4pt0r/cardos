@@ -1,8 +1,8 @@
 #include "HttpDemoApp.h"
 
-#include <HTTPClient.h>
 #include <WiFi.h>
 
+#include "../sdk/Http.h"
 #include "../ui/Theme.h"
 
 namespace {
@@ -10,10 +10,10 @@ struct Endpoint {
   const char* label;
   const char* url;
 };
-// Plain HTTP only — TLS is out of scope for this demo.
 const Endpoint kEndpoints[] = {
     {"My public IP", "http://ifconfig.me/ip"},
     {"GET example.com", "http://example.com/"},
+    {"HTTPS httpbin", "https://httpbin.org/get"},
 };
 }  // namespace
 
@@ -59,31 +59,15 @@ void HttpDemoApp::update(uint32_t) {
 }
 
 void HttpDemoApp::doRequest(const std::string& url) {
-  Serial.printf("[http] GET %s\n", url.c_str());
-  HTTPClient http;
-  http.setConnectTimeout(5000);
-  http.setTimeout(5000);
-  http.setUserAgent("CardOS/0.1");
-  if (!http.begin(url.c_str())) {
-    status_ = "http.begin() failed";
-    body_.clear();
-    return;
-  }
-  uint32_t t0 = millis();
-  int code = http.GET();
-  uint32_t dt = millis() - t0;
-  if (code > 0) {
-    String payload = http.getString();
-    status_ = "HTTP " + std::to_string(code) + "  " + std::to_string(dt) +
-              " ms  " + std::to_string(payload.length()) + " B";
-    payload.replace("\r", "");
-    body_ = std::string(payload.c_str()).substr(0, 160);
+  cardos::http::Response r = cardos::http::get(url);
+  if (r.status > 0) {
+    status_ = "HTTP " + std::to_string(r.status) + "  " +
+              std::to_string(r.body.size()) + " B";
+    body_ = r.body.substr(0, 160);
   } else {
-    status_ = std::string("error: ") + HTTPClient::errorToString(code).c_str();
+    status_ = "error: " + r.error;
     body_.clear();
   }
-  http.end();
-  Serial.printf("[http] %s\n", status_.c_str());
 }
 
 void HttpDemoApp::render(M5Canvas& gfx) {
