@@ -1,10 +1,13 @@
 #include <unity.h>
+#include <cstring>
+#include <cstdio>
 #include "../../src/core/KeyEvent.h"
 #include "../../src/core/KeyTracker.h"
 #include "../../src/ui/scroll.h"
 #include "../../src/core/IdlePolicy.h"
 #include "../../src/services/WiFiStore.h"
 #include "../../src/sdk/FsPath.h"
+#include "../../src/sdk/WavWriter.h"
 
 void test_enter_key() {
   KeyEvent ev = mapKey(0, false, true, false, false);
@@ -267,6 +270,47 @@ void test_fspath_invalid() {
   TEST_ASSERT_FALSE(cardos::fs::splitPath("/flashy/x", mount, rel));
 }
 
+void test_wav_header_fields() {
+  uint8_t h[44];
+  cardos::audio::writeWavHeader(h, 16000, 1, 3200);  // 0.1s of 16k mono
+  TEST_ASSERT_EQUAL_MEMORY("RIFF", h, 4);
+  TEST_ASSERT_EQUAL_MEMORY("WAVE", h + 8, 4);
+  TEST_ASSERT_EQUAL_MEMORY("data", h + 36, 4);
+  uint32_t riffSize;  memcpy(&riffSize, h + 4, 4);
+  TEST_ASSERT_EQUAL(36 + 3200, (int)riffSize);
+  uint32_t rate;      memcpy(&rate, h + 24, 4);
+  TEST_ASSERT_EQUAL(16000, (int)rate);
+  uint32_t byteRate;  memcpy(&byteRate, h + 28, 4);
+  TEST_ASSERT_EQUAL(32000, (int)byteRate);   // 16k * 1ch * 2B
+  uint16_t bits;      memcpy(&bits, h + 34, 2);
+  TEST_ASSERT_EQUAL(16, (int)bits);
+  uint32_t dataSize;  memcpy(&dataSize, h + 40, 4);
+  TEST_ASSERT_EQUAL(3200, (int)dataSize);
+}
+
+void test_wav_writer_roundtrip() {
+  const char* path = "/tmp/cardos_test.wav";
+  cardos::audio::WavWriter w;
+  TEST_ASSERT_TRUE(w.open(path, 16000));
+  int16_t samples[256];
+  for (int i = 0; i < 256; i++) samples[i] = (int16_t)(i * 100);
+  w.write(samples, 256);
+  w.write(samples, 256);
+  TEST_ASSERT_EQUAL(1024, (int)w.dataBytes());  // 512 samples * 2B
+  w.close();
+  FILE* f = fopen(path, "rb");
+  TEST_ASSERT_NOT_NULL(f);
+  fseek(f, 0, SEEK_END);
+  TEST_ASSERT_EQUAL(44 + 1024, (int)ftell(f));
+  uint8_t h[44];
+  fseek(f, 0, SEEK_SET);
+  fread(h, 1, 44, f);
+  uint32_t dataSize;  memcpy(&dataSize, h + 40, 4);
+  TEST_ASSERT_EQUAL(1024, (int)dataSize);       // header patched on close
+  fclose(f);
+  ::remove(path);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -302,5 +346,7 @@ int main(int, char**) {
   RUN_TEST(test_fspath_flash);
   RUN_TEST(test_fspath_sd_root);
   RUN_TEST(test_fspath_invalid);
+  RUN_TEST(test_wav_header_fields);
+  RUN_TEST(test_wav_writer_roundtrip);
   return UNITY_END();
 }
