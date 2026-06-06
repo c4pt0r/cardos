@@ -272,6 +272,23 @@ void test_fspath_invalid() {
   TEST_ASSERT_FALSE(cardos::fs::splitPath("/flashy/x", mount, rel));
 }
 
+void test_parent_path_file() {
+  TEST_ASSERT_EQUAL_STRING(
+      "/flash/rec", cardos::fs::parentPath("/flash/rec/a.wav").c_str());
+}
+
+void test_parent_path_dir_to_mount() {
+  TEST_ASSERT_EQUAL_STRING("/flash",
+                           cardos::fs::parentPath("/flash/rec").c_str());
+  TEST_ASSERT_EQUAL_STRING("/sd", cardos::fs::parentPath("/sd/x").c_str());
+}
+
+void test_parent_path_mount_root_is_empty() {
+  // "" tells the explorer to fall back to the mounts screen.
+  TEST_ASSERT_EQUAL_STRING("", cardos::fs::parentPath("/flash").c_str());
+  TEST_ASSERT_EQUAL_STRING("", cardos::fs::parentPath("/sd").c_str());
+}
+
 void test_wav_header_fields() {
   uint8_t h[44];
   cardos::audio::writeWavHeader(h, 16000, 1, 3200);  // 0.1s of 16k mono
@@ -396,6 +413,9 @@ int main(int, char**) {
   RUN_TEST(test_fspath_flash);
   RUN_TEST(test_fspath_sd_root);
   RUN_TEST(test_fspath_invalid);
+  RUN_TEST(test_parent_path_file);
+  RUN_TEST(test_parent_path_dir_to_mount);
+  RUN_TEST(test_parent_path_mount_root_is_empty);
   RUN_TEST(test_wav_header_fields);
   RUN_TEST(test_wav_writer_roundtrip);
   RUN_TEST(test_multipart_prefix);

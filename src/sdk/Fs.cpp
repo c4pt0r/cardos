@@ -82,6 +82,12 @@ bool mkdir(const std::string& path) {
   return be->exists(rel.c_str()) || be->mkdir(rel.c_str());
 }
 
+bool rmdir(const std::string& path) {
+  std::string rel;
+  FS* be = backendFor(path, rel);
+  return be && be->rmdir(rel.c_str());
+}
+
 std::vector<Entry> list(const std::string& dir) {
   std::vector<Entry> out;
   std::string rel;

@@ -19,6 +19,7 @@ bool writeFile(const std::string& path, const std::string& data,
 bool exists(const std::string& path);
 bool remove(const std::string& path);
 bool mkdir(const std::string& path);
+bool rmdir(const std::string& path);  // empty directories only
 
 struct Entry {
   std::string name;  // bare name, no directory prefix

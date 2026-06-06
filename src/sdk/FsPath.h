@@ -17,4 +17,13 @@ inline bool splitPath(const std::string& path, std::string& mount,
   return false;
 }
 
+// Parent directory of a path: "/flash/rec/a.wav" -> "/flash/rec",
+// "/flash/rec" -> "/flash". A bare mount has no parent and yields "".
+inline std::string parentPath(const std::string& path) {
+  std::string mount, rel;
+  if (!splitPath(path, mount, rel) || rel == "/") return "";
+  size_t slash = path.rfind('/');
+  return path.substr(0, slash);
+}
+
 }  // namespace cardos::fs

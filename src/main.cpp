@@ -1,6 +1,7 @@
 #include <M5Cardputer.h>
 
 #include "apps/AppUploaderApp.h"
+#include "apps/FileExplorerApp.h"
 #include "apps/HttpDemoApp.h"
 #include "apps/LauncherApp.h"
 #include "apps/LuaAppsApp.h"
@@ -34,6 +35,7 @@ VoiceMemoApp voiceMemo;
 ScriptHost scriptHost;
 LuaAppsApp luaApps(scriptHost);
 AppUploaderApp appUploader;
+FileExplorerApp fileExplorer;
 SerialControl serialControl;
 PowerManager power;
 uint32_t lastMs = 0;
@@ -63,6 +65,7 @@ void setup() {
   launcher.addEntry("Voice Memo", &voiceMemo);
   launcher.addEntry("Lua Apps", &luaApps);
   launcher.addEntry("App Uploader", &appUploader);
+  launcher.addEntry("Files", &fileExplorer);
   launcher.addEntry("System Info", &sysinfo);
   scriptHost.begin(&apps);
   serialControl.begin(&scriptHost);
