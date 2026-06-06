@@ -1,0 +1,14 @@
+name = "cardos-voice"
+main = "src/index.js"
+compatibility_date = "2024-11-06"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "cardos-voice"
+
+[vars]
+DB9_DB_ID = "emwisr1axc1o"
+
+# Secrets (set via `wrangler secret put`, never committed):
+#   DB9_TOKEN   - scoped db9 rw token for database cardos_voice
+#   UPLOAD_KEY  - shared key the device sends as X-Upload-Key

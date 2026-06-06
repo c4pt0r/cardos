@@ -3,6 +3,7 @@
 #include "apps/HttpDemoApp.h"
 #include "apps/LauncherApp.h"
 #include "apps/RecorderApp.h"
+#include "apps/VoiceMemoApp.h"
 #include "apps/SysInfoApp.h"
 #include "apps/WiFiApp.h"
 #include "core/AppManager.h"
@@ -25,6 +26,7 @@ WiFiService wifiService;
 WiFiApp wifiApp(wifiService, wifiStore);
 HttpDemoApp httpDemo;
 RecorderApp recorder;
+VoiceMemoApp voiceMemo;
 PowerManager power;
 uint32_t lastMs = 0;
 }  // namespace
@@ -47,6 +49,7 @@ void setup() {
   launcher.addEntry("WiFi Settings", &wifiApp);
   launcher.addEntry("HTTP Demo", &httpDemo);
   launcher.addEntry("Recorder", &recorder);
+  launcher.addEntry("Voice Memo", &voiceMemo);
   launcher.addEntry("System Info", &sysinfo);
   apps.begin(M5Cardputer.Display, statusbar::paint);
   apps.push(&launcher);
