@@ -1,5 +1,6 @@
 #include <unity.h>
 #include "../../src/core/KeyEvent.h"
+#include "../../src/core/KeyTracker.h"
 #include "../../src/ui/scroll.h"
 #include "../../src/core/IdlePolicy.h"
 #include "../../src/services/WiFiStore.h"
@@ -186,6 +187,64 @@ void test_store_load_garbage_is_empty() {
   TEST_ASSERT_EQUAL(0, (int)store.networks().size());
 }
 
+static std::vector<KeyTracker::Out> upd(KeyTracker& t,
+                                        std::initializer_list<uint16_t> keys,
+                                        uint32_t now) {
+  std::vector<uint16_t> v(keys);
+  return t.update(v.data(), v.size(), now);
+}
+
+void test_tracker_press_and_release() {
+  KeyTracker t;
+  auto e1 = upd(t, {'a'}, 0);
+  TEST_ASSERT_EQUAL(1, (int)e1.size());
+  TEST_ASSERT_EQUAL('a', e1[0].id);
+  TEST_ASSERT_EQUAL((int)KeyAction::Press, (int)e1[0].action);
+  auto e2 = upd(t, {'a'}, 100);   // still held, below threshold
+  TEST_ASSERT_EQUAL(0, (int)e2.size());
+  auto e3 = upd(t, {}, 200);      // released
+  TEST_ASSERT_EQUAL(1, (int)e3.size());
+  TEST_ASSERT_EQUAL((int)KeyAction::Release, (int)e3[0].action);
+}
+
+void test_tracker_long_press_fires_once() {
+  KeyTracker t;
+  upd(t, {'a'}, 0);
+  auto e1 = upd(t, {'a'}, 599);
+  TEST_ASSERT_EQUAL(0, (int)e1.size());
+  auto e2 = upd(t, {'a'}, 600);   // threshold
+  TEST_ASSERT_EQUAL(1, (int)e2.size());
+  TEST_ASSERT_EQUAL((int)KeyAction::LongPress, (int)e2[0].action);
+  auto e3 = upd(t, {'a'}, 1200);  // no repeat
+  TEST_ASSERT_EQUAL(0, (int)e3.size());
+  auto e4 = upd(t, {}, 1300);
+  TEST_ASSERT_EQUAL((int)KeyAction::Release, (int)e4[0].action);
+}
+
+void test_tracker_multiple_keys() {
+  KeyTracker t;
+  auto e1 = upd(t, {'a', 'b'}, 0);
+  TEST_ASSERT_EQUAL(2, (int)e1.size());
+  auto e2 = upd(t, {'b'}, 100);   // 'a' released, 'b' held
+  TEST_ASSERT_EQUAL(1, (int)e2.size());
+  TEST_ASSERT_EQUAL('a', e2[0].id);
+  TEST_ASSERT_EQUAL((int)KeyAction::Release, (int)e2[0].action);
+}
+
+void test_tracker_special_ids() {
+  KeyTracker t;
+  auto e1 = upd(t, {KeyTracker::kEnterId}, 0);
+  TEST_ASSERT_EQUAL((int)KeyTracker::kEnterId, (int)e1[0].id);
+  TEST_ASSERT_EQUAL((int)KeyAction::Press, (int)e1[0].action);
+}
+
+void test_tracker_overflow_ignored() {
+  KeyTracker t;
+  // 9 keys; capacity is 8 — the 9th must be silently ignored.
+  auto e1 = upd(t, {'a','b','c','d','e','f','g','h','i'}, 0);
+  TEST_ASSERT_EQUAL(8, (int)e1.size());
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_enter_key);
@@ -213,5 +272,10 @@ int main(int, char**) {
   RUN_TEST(test_store_evicts_oldest_when_full);
   RUN_TEST(test_store_remove);
   RUN_TEST(test_store_load_garbage_is_empty);
+  RUN_TEST(test_tracker_press_and_release);
+  RUN_TEST(test_tracker_long_press_fires_once);
+  RUN_TEST(test_tracker_multiple_keys);
+  RUN_TEST(test_tracker_special_ids);
+  RUN_TEST(test_tracker_overflow_ignored);
   return UNITY_END();
 }
