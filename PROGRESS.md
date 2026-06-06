@@ -9,6 +9,7 @@ Last updated: 2026-06-06
 | MVP (launcher + WiFi + power management) | ✅ Merged to `main`, running on hardware |
 | HTTP Demo app | ✅ Merged to `main`, verified on hardware |
 | App SDK | 🚧 On branch `sdk` — code complete (tasks 1–9); pending on-device acceptance + merge (task 10) |
+| Voice Memo app + cardos-voice backend | 🚧 On branch `sdk` — code complete, backend deployed + verified; device flash pending |
 
 ## Done
 
@@ -53,6 +54,27 @@ All 41 native tests pass; `pio run -e m5stack-cardputer` builds clean.
   push-to-talk record → WAV (~32 KB/s) → httpbin upload with progress bar.
 - Task 3/9: SD SPI pins (SCK=40/MISO=39/MOSI=14/CS=12); `recDir()` flash/SD switch.
 - Task 10 acceptance checklist (see plan) + merge `sdk` → `main` after it passes.
+
+## Voice Memo app + cardos-voice backend (branch `sdk`)
+
+Spec: `docs/superpowers/specs/2026-06-06-voice-memo-design.md`
+
+- **Device app** `src/apps/VoiceMemoApp.{h,cpp}` — hold any non-Fn key →
+  record to `/flash/voice/memo-*.wav`; release → multipart upload to the
+  Worker with a progress bar; Esc/G0 exits. Registered in the launcher.
+  Firmware builds clean; native still 41/41.
+- **Backend** `backend/voice-worker/` — Cloudflare Worker `cardos-voice`,
+  **deployed** at `https://cardos-voice.db9.workers.dev`.
+  - `POST /upload` (X-Upload-Key) → R2 `cardos-voice` + db9 INSERT;
+    `GET /recordings`, `GET /audio/:id`.
+  - db9 DB `cardos_voice` (id `emwisr1axc1o`), table `recordings`.
+  - Secrets in the Worker only: `DB9_TOKEN` (scoped rw), `UPLOAD_KEY`.
+  - vitest 6/6 for the pure SQL builders.
+  - **Verified end-to-end via curl**: upload → R2 object + db9 row →
+    `/audio/:id` streams the WAV back (16044 B); wrong key → 401.
+- **Deferred to hardware**: flash firmware, hold a key to record on the
+  Cardputer, confirm a real memo lands in R2 + db9 (`db9 sql cardos_voice
+  -q "SELECT * FROM recordings"`).
 
 ## Upcoming Plan
 

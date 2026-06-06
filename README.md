@@ -23,6 +23,7 @@ Docs: [design](docs/superpowers/specs/2026-06-05-cardos-design.md) ·
 | WiFi Settings | Scan, connect (on-device password entry), saved networks (8 max), auto-connect on boot |
 | HTTP Demo | HTTP/HTTPS GET smoke tests (public IP, example.com, httpbin TLS) with status display |
 | Recorder | Push-to-talk voice memos (hold Space), saved to /flash or /sd, multipart upload with progress |
+| Voice Memo | Hold any key to record, release to upload to a Cloudflare Worker (audio → R2, metadata → db9) |
 | System Info | SSID / IP / RSSI / heap / battery / uptime |
 
 ## Tech Stack
@@ -44,6 +45,13 @@ pio test -e native      # run unit tests on the host
 
 See [docs/sdk.md](docs/sdk.md) for the app SDK — input, audio, filesystem,
 HTTP, and widgets, all behind a single `#include "../sdk/CardOS.h"`.
+
+## Backend
+
+The Voice Memo app uploads to a Cloudflare Worker in
+[backend/voice-worker](backend/voice-worker) that stores audio in R2 and
+metadata in [db9](https://db9.ai) (serverless Postgres). See its README
+for routes, config, and deploy steps.
 
 ## License
 
