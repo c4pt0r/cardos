@@ -21,7 +21,8 @@ Docs: [design](docs/superpowers/specs/2026-06-05-cardos-design.md) ·
 | App | What it does |
 |---|---|
 | WiFi Settings | Scan, connect (on-device password entry), saved networks (8 max), auto-connect on boot |
-| HTTP Demo | Plain-HTTP GET smoke tests (public IP, example.com) with latency/status display |
+| HTTP Demo | HTTP/HTTPS GET smoke tests (public IP, example.com, httpbin TLS) with status display |
+| Recorder | Push-to-talk voice memos (hold Space), saved to /flash or /sd, multipart upload with progress |
 | System Info | SSID / IP / RSSI / heap / battery / uptime |
 
 ## Tech Stack
@@ -38,6 +39,11 @@ pio run -t upload       # flash over USB
 pio device monitor      # serial logs
 pio test -e native      # run unit tests on the host
 ```
+
+## Writing apps
+
+See [docs/sdk.md](docs/sdk.md) for the app SDK — input, audio, filesystem,
+HTTP, and widgets, all behind a single `#include "../sdk/CardOS.h"`.
 
 ## License
 

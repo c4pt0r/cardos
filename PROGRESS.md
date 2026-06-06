@@ -8,7 +8,7 @@ Last updated: 2026-06-06
 |---|---|
 | MVP (launcher + WiFi + power management) | ✅ Merged to `main`, running on hardware |
 | HTTP Demo app | ✅ Merged to `main`, verified on hardware |
-| App SDK | 🚧 In progress on branch `sdk` (task 1/10 done) |
+| App SDK | 🚧 On branch `sdk` — code complete (tasks 1–9); pending on-device acceptance + merge (task 10) |
 
 ## Done
 
@@ -34,17 +34,25 @@ Plan: `docs/superpowers/plans/2026-06-06-cardos-sdk.md`
 | # | Task | State |
 |---|---|---|
 | 1 | KeyAction + pure KeyTracker (press/long-press/release), native tests | ✅ done (30/30 tests) |
-| 2 | InputRouter rewrite + press guards in widgets/apps | ⬜ next |
-| 3 | Filesystem: `cardos::fs` over LittleFS `/flash` + SD `/sd` | ⬜ |
-| 4 | WavWriter (pure, native-tested) | ⬜ |
-| 5 | Audio: `cardos::audio` (streaming chunks + record-to-WAV) | ⬜ |
-| 6 | HTTP(S): `cardos::http` GET/POST/JSON/multipart upload + HttpDemo refactor | ⬜ |
-| 7 | Widgets: TextView (UTF-8 wrap), ProgressBar, Label | ⬜ |
-| 8 | Umbrella header `sdk/CardOS.h` + `docs/sdk.md` | ⬜ |
-| 9 | Recorder example app (push-to-talk → WAV → upload with progress) | ⬜ |
-| 10 | On-device acceptance + README + merge to `main` | ⬜ |
+| 2 | InputRouter rewrite + press guards in widgets/apps | ✅ done (device build + 30/30) |
+| 3 | Filesystem: `cardos::fs` over LittleFS `/flash` + SD `/sd` | ✅ done (33/33) |
+| 4 | WavWriter (pure, native-tested) | ✅ done (35/35) |
+| 5 | Audio: `cardos::audio` (streaming chunks + record-to-WAV) | ✅ done (build only; mic semantics need device) |
+| 6 | HTTP(S): `cardos::http` GET/POST/JSON/multipart upload + HttpDemo refactor | ✅ done (37/37) |
+| 7 | Widgets: TextView (UTF-8 wrap), ProgressBar, Label | ✅ done (41/41) |
+| 8 | Umbrella header `sdk/CardOS.h` + `docs/sdk.md` | ✅ done |
+| 9 | Recorder example app (push-to-talk → WAV → upload with progress) | ✅ done (build only; needs device) |
+| 10 | On-device acceptance + README + merge to `main` | 🚧 README done; acceptance + merge pending |
 
-Target test count after task 7: 41 native tests.
+All 41 native tests pass; `pio run -e m5stack-cardputer` builds clean.
+
+### Deferred to hardware (no device connected during build-out)
+
+- Task 2: input feel — no double-trigger on key release.
+- Task 5/9: mic ping-pong chunk semantics (`Mic.isRecording()` queue) and
+  push-to-talk record → WAV (~32 KB/s) → httpbin upload with progress bar.
+- Task 3/9: SD SPI pins (SCK=40/MISO=39/MOSI=14/CS=12); `recDir()` flash/SD switch.
+- Task 10 acceptance checklist (see plan) + merge `sdk` → `main` after it passes.
 
 ## Upcoming Plan
 
