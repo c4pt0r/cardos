@@ -23,7 +23,13 @@ FS* backendFor(const std::string& path, std::string& rel) {
 bool begin() {
   // base_path "/flash" registers the POSIX VFS mount point.
   bool ok = LittleFS.begin(/*formatOnFail=*/true, "/flash");
-  Serial.printf("[fs] /flash %s\n", ok ? "mounted" : "MOUNT FAILED");
+  if (ok) {
+    Serial.printf("[fs] /flash mounted (%u/%u KB used)\n",
+                  (unsigned)(LittleFS.usedBytes() / 1024),
+                  (unsigned)(LittleFS.totalBytes() / 1024));
+  } else {
+    Serial.println("[fs] /flash MOUNT FAILED");
+  }
   return ok;
 }
 
