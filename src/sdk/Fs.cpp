@@ -9,7 +9,9 @@ namespace cardos::fs {
 namespace {
 // Cardputer microSD over SPI. VERIFY ON HARDWARE (spec section 5 risk).
 constexpr int kSdSck = 40, kSdMiso = 39, kSdMosi = 14, kSdCs = 12;
+constexpr uint32_t kSdProbeBackoffMs = 10000;
 bool sdMounted = false;
+uint32_t lastSdProbeMs = 0;  // 0 = never probed
 
 // Returns the Arduino FS backend for a path, and the path relative to it.
 FS* backendFor(const std::string& path, std::string& rel) {
@@ -35,9 +37,15 @@ bool begin() {
 
 bool sdAvailable() {
   if (sdMounted && SD.cardType() != CARD_NONE) return true;
+  // A failed probe blocks ~500ms and spams sd_diskio errors; back off so
+  // callers (e.g. recDir() per keypress) don't stall the UI without a card.
+  uint32_t now = millis();
+  if (lastSdProbeMs != 0 && now - lastSdProbeMs < kSdProbeBackoffMs)
+    return false;
+  lastSdProbeMs = now;
   SPI.begin(kSdSck, kSdMiso, kSdMosi, kSdCs);
   sdMounted = SD.begin(kSdCs, SPI, 25000000, "/sd");
-  if (sdMounted) Serial.println("[fs] /sd mounted");
+  Serial.printf("[fs] /sd %s\n", sdMounted ? "mounted" : "not present");
   return sdMounted;
 }
 
