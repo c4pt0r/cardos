@@ -142,13 +142,15 @@ Specs: `docs/superpowers/specs/2026-06-06-file-explorer-design.md`,
 ## Acceptance scoreboard (hardware)
 
 Verified: boot/launcher/status bar; scan; connect+password (IP);
-auto-connect candidate selection after reboot (NVS intact); HTTP/HTTPS
-GETs; Voice Memo end-to-end (record → 219KB WAV → Worker 200 → R2+db9);
-Recorder record-to-WAV; Lua push/list/run over serial; /flash 4.69MB.
-Pending: 60s dim + 5min deep sleep (automated serial watch running),
-G0 wake, key-release feel, wrong-password retry, saved-network
-view/delete, Recorder httpbin upload, Lua REPL keyboard feel, SD-card
-present paths (no card on hand).
+reboot auto-connect (NVS intact — connected NETGEAR16 unattended);
+HTTP/HTTPS GETs; Voice Memo end-to-end (record → 219KB WAV → Worker 200
+→ R2+db9); Recorder record-to-WAV; Lua push/list/run over serial;
+/flash 4.69MB; **full power cycle**: deep sleep entered at exactly
+303s idle (300s + 3s notice, serial-logged), USB powered off, G0 woke
+it in ~1s, WiFi auto-reconnected (verified by ping from the host).
+Pending (human-at-keyboard, low risk): 60s dim visual, key-release
+feel, wrong-password retry, saved-network view/delete, Recorder
+httpbin upload, Lua REPL keyboard feel, SD-card paths (no card on hand).
 
 ## Upcoming Plan
 
