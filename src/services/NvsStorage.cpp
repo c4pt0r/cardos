@@ -9,7 +9,10 @@ constexpr const char* kKey = "networks";
 
 std::string NvsStorage::load() {
   Preferences p;
-  p.begin(kNamespace, /*readOnly=*/true);
+  // Open read-write: a read-only open of a namespace that doesn't exist
+  // yet (fresh NVS) logs a scary nvs_open NOT_FOUND error; read-write
+  // creates it silently on first boot.
+  p.begin(kNamespace, /*readOnly=*/false);
   String s = p.getString(kKey, "");
   p.end();
   return std::string(s.c_str());
