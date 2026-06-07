@@ -5,13 +5,15 @@
 #include <WiFi.h>
 
 #include "../sdk/Fs.h"
+#include "Secrets.h"
 
 namespace {
 // Deployed cardos-voice Worker (see backend/voice-worker). The upload key
-// is a shared secret compiled into firmware — it deters casual abuse of a
-// public endpoint; it is not extraction-proof on a hobby device.
+// lives in Secrets.h (gitignored; copy Secrets.h.example) — compiled into
+// firmware it deters casual abuse of a public endpoint; it is not
+// extraction-proof on a hobby device.
 constexpr const char* kWorkerUrl = "https://cardos-voice.db9.workers.dev";
-constexpr const char* kUploadKey = "2553a72b9ac8d2caa3e112d440c69bb7";
+constexpr const char* kUploadKey = secrets::kUploadKey;
 constexpr const char* kRecDir = "/flash/voice";
 }  // namespace
 

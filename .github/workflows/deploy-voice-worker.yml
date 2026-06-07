@@ -18,12 +18,14 @@ jobs:
         run: |
           npm ci
           npm test
-      - name: Deploy worker (syncs OPENAI_API_KEY)
+      - name: Deploy worker (syncs OPENAI_API_KEY + UPLOAD_KEY)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           workingDirectory: backend/voice-worker
           secrets: |
             OPENAI_API_KEY
+            UPLOAD_KEY
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          UPLOAD_KEY: ${{ secrets.UPLOAD_KEY }}
