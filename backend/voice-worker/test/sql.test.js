@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildInsertSql, sqlStr, sqlNum } from "../src/sql.js";
+import { buildInsertSql, sqlStr, sqlNum, buildUpdateTextSql } from "../src/sql.js";
 
 describe("sqlStr", () => {
   it("quotes and escapes single quotes", () => {
@@ -78,5 +78,26 @@ describe("buildInsertSql", () => {
       device: "cardputer",
     });
     expect(sql).toContain("NULL"); // sample_rate
+  });
+});
+
+describe("buildUpdateTextSql", () => {
+  it("updates all three text columns with escaping", () => {
+    const sql = buildUpdateTextSql(
+      "11111111-1111-1111-1111-111111111111",
+      "raw 'q'",
+      "corrected",
+      "cleaned"
+    );
+    expect(sql).toBe(
+      "UPDATE recordings SET raw_text = 'raw ''q''', " +
+        "corrected_text = 'corrected', cleaned_text = 'cleaned' " +
+        "WHERE id = '11111111-1111-1111-1111-111111111111'"
+    );
+  });
+  it("renders NULL for missing layers", () => {
+    const sql = buildUpdateTextSql("x", "raw", null, null);
+    expect(sql).toContain("corrected_text = NULL");
+    expect(sql).toContain("cleaned_text = NULL");
   });
 });

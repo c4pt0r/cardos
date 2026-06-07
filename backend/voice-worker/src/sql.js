@@ -29,3 +29,13 @@ export function buildInsertSql(m) {
     `${sqlNum(m.sample_rate)}, ${sqlStr(m.device)})`
   );
 }
+
+// Build the UPDATE that attaches transcription text layers to a recording.
+export function buildUpdateTextSql(id, rawText, correctedText, cleanedText) {
+  return (
+    `UPDATE recordings SET raw_text = ${sqlStr(rawText)}, ` +
+    `corrected_text = ${sqlStr(correctedText)}, ` +
+    `cleaned_text = ${sqlStr(cleanedText)} ` +
+    `WHERE id = ${sqlStr(id)}`
+  );
+}
