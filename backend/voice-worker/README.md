@@ -36,6 +36,16 @@ CREATE TABLE recordings (
 );
 ```
 
+## Schema migrations
+
+2026-06-07 — transcription text layers (run once, idempotent):
+
+```sql
+ALTER TABLE recordings ADD COLUMN IF NOT EXISTS raw_text TEXT;
+ALTER TABLE recordings ADD COLUMN IF NOT EXISTS corrected_text TEXT;
+ALTER TABLE recordings ADD COLUMN IF NOT EXISTS cleaned_text TEXT;
+```
+
 ## Test
 
 ```sh
