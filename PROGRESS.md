@@ -14,6 +14,7 @@ Last updated: 2026-06-07
 | App Uploader (Lua apps over WiFi) | ✅ Merged to `main`, running on hardware |
 | File Explorer + storage fixes | ✅ On `main`, flashed and in use |
 | Lua REPL | ✅ On `main`, flashed; on-device acceptance pending |
+| Storage expansion (/flash 1.5→4.7MB) + serial tool fixes | ✅ On `main`, flashed and verified |
 
 ## Done
 
@@ -119,14 +120,45 @@ Specs: `docs/superpowers/specs/2026-06-06-file-explorer-design.md`,
 - **Status**: 71/71 native tests; flashed to hardware. REPL on-device
   acceptance pending (keyboard feel, Fn-layer keys).
 
+## Storage expansion + serial hardening (2026-06-07, main)
+
+- **Partition reclaim**: custom `partitions_cardos_8MB.csv` drops the idle
+  OTA slot (`app1`/`otadata`) — `/flash` grows **1.5MB → 4.69MB** (verified
+  on hardware: `[fs] /flash mounted (16/4800 KB used)`). `nvs` keeps its
+  stock offset; **saved WiFi credentials survived the repartition**
+  (auto-connect found and tried a saved network after the flash). No OTA
+  with this table — by design.
+- **Fixes landed**: SD probe 10s backoff (re-applied after merge loss);
+  first-boot NVS error log silenced (read-write open creates the
+  namespace); `fs::begin` logs used/total KB.
+- **Serial install pipeline verified on hardware**: `cardos-app.py`
+  push/list/run all work end-to-end. Two real bugs fixed: opening the CDC
+  port reboots the board (tool now pings until the device settles, and
+  throttles the payload), and LIST sent its `OK <n>` terminator before the
+  ITEM lines (host stops at the first terminator — items now precede END).
+  All three example Lua apps reinstalled and `run hello.lua` launches
+  remotely; `/flash` contents persist across reflashes.
+
+## Acceptance scoreboard (hardware)
+
+Verified: boot/launcher/status bar; scan; connect+password (IP);
+auto-connect candidate selection after reboot (NVS intact); HTTP/HTTPS
+GETs; Voice Memo end-to-end (record → 219KB WAV → Worker 200 → R2+db9);
+Recorder record-to-WAV; Lua push/list/run over serial; /flash 4.69MB.
+Pending: 60s dim + 5min deep sleep (automated serial watch running),
+G0 wake, key-release feel, wrong-password retry, saved-network
+view/delete, Recorder httpbin upload, Lua REPL keyboard feel, SD-card
+present paths (no card on hand).
+
 ## Upcoming Plan
 
-1. **Finish SDK tasks 2–10** (above). Tasks needing the device for verification: 2 (input feel), 5 (mic chunk semantics — flagged risk), 9/10 (Recorder end-to-end, SD pin check SCK=40/MISO=39/MOSI=14/CS=12).
-2. **Close out MVP acceptance** — the 5 remaining user-side checks; reboot auto-connect now testable since a network is saved.
-3. **Known small fixes queued**
-   - Suppress the harmless first-boot `nvs_open failed: NOT_FOUND` log line
-   - Investigate USB drops during WiFi activity (suspected cable/power; recommend a better USB-C cable)
-4. **Candidate ideas after SDK (not committed)**
+1. **Close the pending acceptance items** above (most need a human at the
+   keyboard; deep-sleep entry is being watched over serial right now).
+2. **USB drops during WiFi/SD activity** — at least one earlier "drop" was
+   actually deep sleep working as designed; for the rest, try a beefier
+   USB-C cable before suspecting firmware.
+3. **Candidate ideas (not committed)**
    - Audio playback (speaker) + voice-assistant demo (record → upload → TTS reply)
    - Clock/NTP app
-   - OTA firmware updates; auto-repeat keys; certificate verification option
+   - OTA firmware updates (would need a partition rethink after the
+     storage expansion); auto-repeat keys; certificate verification option
