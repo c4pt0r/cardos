@@ -129,7 +129,8 @@ async function handleUpload(request, env) {
       try {
         await db9(env, buildUpdateTextSql(id, raw, corrected, cleaned));
       } catch (e) {
-        pipeErr = (pipeErr ? pipeErr + "; " : "") + "db9 text update failed";
+        pipeErr = (pipeErr ? pipeErr + "; " : "") +
+          "db9 text update failed: " + String((e && e.message) || e);
       }
     } catch (e) {
       pipeErr = String((e && e.message) || e);

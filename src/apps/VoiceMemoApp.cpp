@@ -136,6 +136,7 @@ void VoiceMemoApp::update(uint32_t dtMs) {
       }
       if (!text.empty()) {
         status_ = "Transcribed";
+        if (text.size() > 512) text = text.substr(0, 512) + "...";  // heap cap
         result_.setText(text + (err.empty() ? "" : "\n[warn: " + err + "]"));
       } else {
         status_ = "Uploaded (no transcript)";
