@@ -180,6 +180,15 @@ Spec: `docs/superpowers/specs/2026-06-07-voice-transcription-design.md`
   gitignored `src/apps/Secrets.h` (template: `Secrets.h.example`) and
   synced to the Worker from GitHub Secrets on every CI deploy; the old
   leaked key returns 401.
+- **Transcript webhook** (spec `2026-06-07-transcript-webhook-design.md`):
+  after transcription, the Worker fire-and-forgets the full payload
+  (id/raw/corrected/cleaned/device/size/created_at/audio_url) to
+  `WEBHOOK_URL` via `ctx.waitUntil` — zero device latency, failures only
+  logged, skipped when unset. Optional `X-Webhook-Key`. 28 vitest; E2E
+  verified against webhook.site. `WEBHOOK_URL` is CI-synced from GitHub
+  Secrets — currently points at a throwaway webhook.site inbox; replace
+  with the real receiver via `gh secret set WEBHOOK_URL` + `gh workflow
+  run deploy-voice-worker`.
 
 ## Upcoming Plan
 
