@@ -375,11 +375,13 @@ void test_wrap_empty() {
   TEST_ASSERT_EQUAL(0, (int)lines.size());
 }
 
-void run_lua_tests();  // defined in test_lua.cpp
+void run_lua_tests();   // defined in test_lua.cpp
+void run_repl_tests();  // defined in test_repl.cpp
 
 int main(int, char**) {
   UNITY_BEGIN();
   run_lua_tests();
+  run_repl_tests();
   RUN_TEST(test_enter_key);
   RUN_TEST(test_backspace_key);
   RUN_TEST(test_esc_is_backtick);

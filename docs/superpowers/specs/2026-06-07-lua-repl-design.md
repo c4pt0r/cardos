@@ -36,10 +36,14 @@ entry) and torn down in `onExit()`.
 - Scrollback: the output area shows `> <input>` echo, print() lines,
   results, and errors (errors in `theme::kDanger`). Capped at the last
   50 lines; older lines drop off.
-- Input: single `TextInput` row pinned to the bottom with a `> `
-  prompt.
-- Keys: Enter evaluates; Up/Down cycle input history (last 10);
-  Fn+Up/Down scroll the scrollback; Esc exits the app.
+- Input: a single edit row pinned to the bottom with a `> ` prompt
+  (custom, not TextInput — that widget is three rows tall and its
+  hint line does not fit the REPL layout).
+- Keys: Enter evaluates; Esc exits the app. The arrow keys double as
+  the `; . , /` characters, which Lua source needs, so plain arrows
+  insert their literal char (same convention as TextInput) and the
+  meta actions live on the Fn layer: Fn+Up/Down cycle input history
+  (last 10), Fn+Left/Right page the scrollback up/down.
 - Evaluation blocks the main loop (same convention as the other apps;
   a long `http_get` just stalls the UI briefly).
 

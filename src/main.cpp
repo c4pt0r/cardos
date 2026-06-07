@@ -5,6 +5,7 @@
 #include "apps/HttpDemoApp.h"
 #include "apps/LauncherApp.h"
 #include "apps/LuaAppsApp.h"
+#include "apps/LuaReplApp.h"
 #include "apps/RecorderApp.h"
 #include "apps/ScriptHost.h"
 #include "apps/VoiceMemoApp.h"
@@ -34,6 +35,7 @@ RecorderApp recorder;
 VoiceMemoApp voiceMemo;
 ScriptHost scriptHost;
 LuaAppsApp luaApps(scriptHost);
+LuaReplApp luaRepl;
 AppUploaderApp appUploader;
 FileExplorerApp fileExplorer;
 SerialControl serialControl;
@@ -64,6 +66,7 @@ void setup() {
   launcher.addEntry("Recorder", &recorder);
   launcher.addEntry("Voice Memo", &voiceMemo);
   launcher.addEntry("Lua Apps", &luaApps);
+  launcher.addEntry("Lua REPL", &luaRepl);
   launcher.addEntry("App Uploader", &appUploader);
   launcher.addEntry("Files", &fileExplorer);
   launcher.addEntry("System Info", &sysinfo);
