@@ -43,10 +43,8 @@ void SerialControl::handleLine(const std::string& line) {
     reply("PONG");
   } else if (v == "LIST") {
     auto entries = cardos::fs::list(ScriptHost::dir());
-    int n = 0;
-    for (auto& e : entries)
-      if (!e.isDir && serialproto::validAppName(e.name)) n++;
-    reply("OK " + std::to_string(n));
+    // ITEM lines first, END terminator last — the host stops reading at
+    // the first terminator line, so nothing may precede the items.
     for (auto& e : entries) {
       if (e.isDir || !serialproto::validAppName(e.name)) continue;
       reply("ITEM " + e.name + " " + std::to_string(e.size));

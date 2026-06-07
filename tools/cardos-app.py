@@ -63,6 +63,17 @@ class Client:
         self.ser.open()
         time.sleep(0.2)
         self.ser.reset_input_buffer()
+        self._settle()
+
+    def _settle(self):
+        """Opening the CDC port can reboot the board; ping until it answers."""
+        deadline = time.time() + 10.0
+        while time.time() < deadline:
+            self.ser.reset_input_buffer()
+            self.send_line("PING")
+            if self.read_ctrl(time.time() + 1.0) == "PONG":
+                return
+        sys.exit("device did not answer PING after port open")
 
     def close(self):
         self.ser.close()
@@ -121,17 +132,21 @@ def do_push(client, path, override):
         sys.exit("no READY from device")
     if r.startswith("ERR"):
         sys.exit(f"device rejected PUT: {r}")
-    # stream payload
-    chunk = 512
+    # Stream the payload throttled: the device-side reader drains in a
+    # tight loop, but pacing keeps the CDC RX buffer comfortable.
+    chunk = 128
     sent = 0
     while sent < len(data):
         client.ser.write(data[sent:sent + chunk])
+        client.ser.flush()
         sent += chunk
         pct = min(100, sent * 100 // len(data))
         print(f"\r  uploading {name}: {pct}%", end="", flush=True)
-    client.ser.flush()
+        time.sleep(0.01)
     print()
-    final = client.read_ctrl(time.time() + 6.0)
+    # Outlast the device's own 8s inter-byte timeout so a failure surfaces
+    # as its ERR message instead of a silent None.
+    final = client.read_ctrl(time.time() + 12.0)
     if final == "OK":
         print(f"OK: pushed {name} ({len(data)} bytes, crc {crc:08x})")
     else:
