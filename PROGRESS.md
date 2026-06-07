@@ -15,7 +15,7 @@ Last updated: 2026-06-07
 | File Explorer + storage fixes | ✅ On `main`, flashed and in use |
 | Lua REPL | ✅ On `main`, flashed; on-device acceptance pending |
 | Storage expansion (/flash 1.5→4.7MB) + serial tool fixes | ✅ On `main`, flashed and verified |
-| Voice transcription (Whisper + conservative LLM fix) | ✅ Worker deployed via CI, curl E2E verified; device flash pending |
+| Voice transcription (Whisper + conservative LLM fix) | ✅ Live on hardware — mixed zh/en speech verified end-to-end |
 
 ## Done
 
@@ -170,10 +170,16 @@ Spec: `docs/superpowers/specs/2026-06-07-voice-transcription-design.md`
 - Verified: 22 vitest; CI run green; curl E2E (86KB WAV → raw/corrected
   persisted in db9; noise clip → cleaned="" as expected).
 - Device: VoiceMemoApp shows cleaned text (fallback corrected→raw→error),
-  30s HTTP timeout inside the app. **Flash + live mixed zh/en speech test
-  pending** (device was deep-sleeping at flash time — by design).
-- ⚠️ Security note: `UPLOAD_KEY` sits in plaintext in VoiceMemoApp.cpp in a
-  public repo — rotate it and move it out of committed source.
+  30s HTTP timeout inside the app.
+- **Live acceptance passed (2026-06-07)**: spoken “测试测试，使用Python写一个
+  JSON解析器” → STT got Python/JSON right directly, corrected left it
+  untouched (conservative ✓), cleaned dropped the “测试测试” filler ✓;
+  clean speech passed through all layers unchanged; noise clip → cleaned
+  empty. ~5s end-to-end for a 7s/188KB memo.
+- Security: `UPLOAD_KEY` **rotated** out of committed source — now in
+  gitignored `src/apps/Secrets.h` (template: `Secrets.h.example`) and
+  synced to the Worker from GitHub Secrets on every CI deploy; the old
+  leaked key returns 401.
 
 ## Upcoming Plan
 
