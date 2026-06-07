@@ -15,6 +15,7 @@ Last updated: 2026-06-07
 | File Explorer + storage fixes | ✅ On `main`, flashed and in use |
 | Lua REPL | ✅ On `main`, flashed; on-device acceptance pending |
 | Storage expansion (/flash 1.5→4.7MB) + serial tool fixes | ✅ On `main`, flashed and verified |
+| Voice transcription (Whisper + conservative LLM fix) | ✅ Worker deployed via CI, curl E2E verified; device flash pending |
 
 ## Done
 
@@ -151,6 +152,28 @@ it in ~1s, WiFi auto-reconnected (verified by ping from the host).
 Pending (human-at-keyboard, low risk): 60s dim visual, key-release
 feel, wrong-password retry, saved-network view/delete, Recorder
 httpbin upload, Lua REPL keyboard feel, SD-card paths (no card on hand).
+
+## Voice transcription pipeline (2026-06-07, main)
+
+Spec: `docs/superpowers/specs/2026-06-07-voice-transcription-design.md`
+
+- `/upload` now: R2 + db9 INSERT (unchanged) → OpenAI STT (`STT_MODEL`,
+  default `gpt-4o-transcribe`) → conservative fix via `FIX_MODEL`
+  (default `gpt-4o-mini`, one call, JSON `{corrected, cleaned}`) →
+  db9 UPDATE (`raw_text`/`corrected_text`/`cleaned_text`) → response carries
+  all three. Failures degrade the response, never lose the recording.
+- Prompt contract: fix ONLY obvious ASR errors (中文同音字, 配森→Python,
+  杰森→JSON), no summarizing; `cleaned` additionally drops fillers
+  (这个/那个/嗯…) for intent use.
+- Deploys: GitHub Actions (`deploy-voice-worker.yml`) — tests gate the
+  deploy; `OPENAI_API_KEY` synced from GitHub Secrets each run.
+- Verified: 22 vitest; CI run green; curl E2E (86KB WAV → raw/corrected
+  persisted in db9; noise clip → cleaned="" as expected).
+- Device: VoiceMemoApp shows cleaned text (fallback corrected→raw→error),
+  30s HTTP timeout inside the app. **Flash + live mixed zh/en speech test
+  pending** (device was deep-sleeping at flash time — by design).
+- ⚠️ Security note: `UPLOAD_KEY` sits in plaintext in VoiceMemoApp.cpp in a
+  public repo — rotate it and move it out of committed source.
 
 ## Upcoming Plan
 
