@@ -1,0 +1,29 @@
+name: deploy-voice-worker
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/voice-worker/**"
+      - ".github/workflows/deploy-voice-worker.yml"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install and test
+        working-directory: backend/voice-worker
+        run: |
+          npm ci
+          npm test
+      - name: Deploy worker (syncs OPENAI_API_KEY)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          workingDirectory: backend/voice-worker
+          secrets: |
+            OPENAI_API_KEY
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

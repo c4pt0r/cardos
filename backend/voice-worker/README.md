@@ -46,6 +46,14 @@ ALTER TABLE recordings ADD COLUMN IF NOT EXISTS corrected_text TEXT;
 ALTER TABLE recordings ADD COLUMN IF NOT EXISTS cleaned_text TEXT;
 ```
 
+## CI deploys
+
+Pushes to `main` touching `backend/voice-worker/**` run tests and deploy via
+GitHub Actions (`.github/workflows/deploy-voice-worker.yml`). Required GitHub
+repository secrets: `CLOUDFLARE_API_TOKEN` (Workers edit), `OPENAI_API_KEY`
+(synced into the Worker on every deploy). `DB9_TOKEN`/`UPLOAD_KEY` remain
+manually-set Worker secrets; deploys do not touch them.
+
 ## Test
 
 ```sh
