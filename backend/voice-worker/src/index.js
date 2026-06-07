@@ -1,6 +1,7 @@
 // cardos-voice: receives WAV uploads from the CardOS Voice Memo app,
 // stores audio in R2, and writes metadata to db9 (serverless Postgres).
-import { buildInsertSql } from "./sql.js";
+import { buildInsertSql, buildUpdateTextSql } from "./sql.js";
+import { transcribe, fixTranscript } from "./pipeline.js";
 
 export default {
   async fetch(request, env) {
@@ -83,9 +84,10 @@ async function handleUpload(request, env) {
     parseInt(request.headers.get("X-Sample-Rate") || "", 10) || null;
   const filename = file.name || `${id}.wav`;
 
-  // Store the audio. A File is a Blob, so R2 knows the size.
-  await env.BUCKET.put(key, file, { httpMetadata: { contentType } });
-  const size = file.size || 0;
+  // Read once; R2 and the transcription call each get a deterministic copy.
+  const bytes = await file.arrayBuffer();
+  await env.BUCKET.put(key, bytes, { httpMetadata: { contentType } });
+  const size = bytes.byteLength;
 
   const meta = {
     id,
@@ -105,7 +107,37 @@ async function handleUpload(request, env) {
       502
     );
   }
-  return json({ id, key, size }, 200);
+  // Transcription pipeline. The recording is already persisted — any
+  // failure below degrades the response, never loses data.
+  let raw = null;
+  let corrected = null;
+  let cleaned = null;
+  let pipeErr = null;
+  if (!env.OPENAI_API_KEY) {
+    pipeErr = "OPENAI_API_KEY not configured";
+  } else {
+    try {
+      const wav = new File([bytes], filename, { type: contentType });
+      raw = await transcribe(fetch, env, wav);
+      try {
+        const fix = await fixTranscript(fetch, env, raw);
+        corrected = fix.corrected;
+        cleaned = fix.cleaned;
+      } catch (e) {
+        pipeErr = String((e && e.message) || e);
+      }
+      try {
+        await db9(env, buildUpdateTextSql(id, raw, corrected, cleaned));
+      } catch (e) {
+        pipeErr = (pipeErr ? pipeErr + "; " : "") + "db9 text update failed";
+      }
+    } catch (e) {
+      pipeErr = String((e && e.message) || e);
+    }
+  }
+  const out = { id, key, size, raw, corrected, cleaned };
+  if (pipeErr) out.error = pipeErr;
+  return json(out, 200);
 }
 
 async function handleList(url, env) {
@@ -115,7 +147,8 @@ async function handleList(url, env) {
   const r = await db9(
     env,
     "SELECT id, r2_key, filename, content_type, size_bytes, sample_rate, " +
-      `device, created_at FROM recordings ORDER BY created_at DESC LIMIT ${limit}`
+      "device, created_at, raw_text, corrected_text, cleaned_text " +
+      `FROM recordings ORDER BY created_at DESC LIMIT ${limit}`
   );
   const cols = (r.columns || []).map((c) => c.name);
   const rows = (r.rows || []).map((row) =>

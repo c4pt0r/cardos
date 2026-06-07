@@ -8,7 +8,10 @@ bucket_name = "cardos-voice"
 
 [vars]
 DB9_DB_ID = "emwisr1axc1o"
+STT_MODEL = "gpt-4o-transcribe"
+FIX_MODEL = "gpt-4o-mini"
 
-# Secrets (set via `wrangler secret put`, never committed):
-#   DB9_TOKEN   - scoped db9 rw token for database cardos_voice
-#   UPLOAD_KEY  - shared key the device sends as X-Upload-Key
+# Secrets (never committed):
+#   DB9_TOKEN       - scoped db9 rw token (set once via `wrangler secret put`)
+#   UPLOAD_KEY      - shared key the device sends as X-Upload-Key (ditto)
+#   OPENAI_API_KEY  - synced from GitHub Secrets by the deploy workflow
