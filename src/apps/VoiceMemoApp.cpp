@@ -1,5 +1,6 @@
 #include "VoiceMemoApp.h"
 
+#include <ArduinoJson.h>
 #include <M5Cardputer.h>
 #include <WiFi.h>
 
@@ -15,12 +16,14 @@ constexpr const char* kRecDir = "/flash/voice";
 }  // namespace
 
 void VoiceMemoApp::onEnter() {
+  cardos::http::setTimeout(30000);
   mode_ = Mode::Idle;
   if (status_.empty()) status_ = "Hold any key to record";
   requestRedraw();
 }
 
 void VoiceMemoApp::onExit() {
+  cardos::http::setTimeout(10000);  // restore the global default
   // Don't leave the mic running if we're popped mid-recording.
   if (mode_ == Mode::Recording) cardos::audio::stop();
 }
@@ -119,9 +122,26 @@ void VoiceMemoApp::update(uint32_t dtMs) {
                                       path, "file", h, progress);
     if (r.ok()) {
       cardos::fs::remove(path);  // uploaded: drop the local copy (1.5MB fs)
-      status_ = "Uploaded OK";
-      result_.setText("HTTP " + std::to_string(r.status) + "\n" +
-                      r.body.substr(0, 400));
+      JsonDocument doc;
+      std::string text, err;
+      if (deserializeJson(doc, r.body) == DeserializationError::Ok) {
+        auto pick = [&](const char* k) -> std::string {
+          const char* v = doc[k].as<const char*>();
+          return v ? std::string(v) : std::string();
+        };
+        text = pick("cleaned");
+        if (text.empty()) text = pick("corrected");
+        if (text.empty()) text = pick("raw");
+        err = pick("error");
+      }
+      if (!text.empty()) {
+        status_ = "Transcribed";
+        result_.setText(text + (err.empty() ? "" : "\n[warn: " + err + "]"));
+      } else {
+        status_ = "Uploaded (no transcript)";
+        result_.setText(err.empty() ? r.body.substr(0, 200)
+                                    : "Pipeline error:\n" + err);
+      }
     } else {
       status_ = "Upload failed";
       result_.setText(r.status > 0
@@ -144,7 +164,7 @@ void VoiceMemoApp::render(M5Canvas& gfx) {
     return;
   }
   if (mode_ == Mode::Uploading) {
-    label::draw(gfx, "Uploading...", theme::kPadX, top + 16, theme::kAccent);
+    label::draw(gfx, "Uploading + transcribing...", theme::kPadX, top + 16, theme::kAccent);
     return;
   }
   if (mode_ == Mode::Result) {
