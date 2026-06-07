@@ -67,8 +67,9 @@ LLM failure.
 
 ## 4. Data Model
 
-`recordings` gains three nullable columns (idempotent migration executed by
-the Worker on demand or via a one-time db9 statement):
+`recordings` gains three nullable columns. The idempotent migration below is
+run once against db9 during implementation (CLI: `db9 sql cardos_voice -q ...`)
+and recorded in the worker README — the Worker itself never alters schema:
 
 ```sql
 ALTER TABLE recordings ADD COLUMN IF NOT EXISTS raw_text TEXT;
