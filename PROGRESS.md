@@ -1,6 +1,6 @@
 # CardOS Progress
 
-Last updated: 2026-06-06
+Last updated: 2026-06-07
 
 ## Status at a Glance
 
@@ -8,9 +8,12 @@ Last updated: 2026-06-06
 |---|---|
 | MVP (launcher + WiFi + power management) | ✅ Merged to `main`, running on hardware |
 | HTTP Demo app | ✅ Merged to `main`, verified on hardware |
-| App SDK | 🚧 On branch `sdk` — code complete (tasks 1–9); pending on-device acceptance + merge (task 10) |
-| Voice Memo app + cardos-voice backend | ✅ Merged to `main`; backend deployed + verified; device flash pending |
-| Lua app loader + serial install tool | 🚧 On branch `lua-apps` — interpreter + runtime + tool complete; device flash pending |
+| App SDK | ✅ Merged to `main`, running on hardware |
+| Voice Memo app + cardos-voice backend | ✅ Merged to `main`; backend deployed + verified |
+| Lua app loader + serial install tool | ✅ Merged to `main`, running on hardware |
+| App Uploader (Lua apps over WiFi) | ✅ Merged to `main`, running on hardware |
+| File Explorer + storage fixes | ✅ On `main`, flashed and in use |
+| Lua REPL | ✅ On `main`, flashed; on-device acceptance pending |
 
 ## Done
 
@@ -97,6 +100,25 @@ guide: `docs/lua-apps.md`.
 - **Deferred to hardware**: `push`→`run` over USB, on-screen Lua app, live
   RAM headroom of a `lua_State`.
 
+## File Explorer, Lua REPL, storage fixes (2026-06-06/07, main)
+
+Specs: `docs/superpowers/specs/2026-06-06-file-explorer-design.md`,
+`docs/superpowers/specs/2026-06-07-lua-repl-design.md`.
+
+- **Files app** `src/apps/FileExplorerApp` — browse `/flash` + `/sd`,
+  delete files and empty dirs (ConfirmDialog; `fs::rmdir` added).
+  `parentPath()` pure helper in `FsPath.h`, native-tested.
+- **Lua REPL** `src/apps/LuaReplApp` — persistent on-device session;
+  expression-first eval (`ReplEval.h`, parse-only trial so statement
+  side effects never run twice), 50-line wrapped scrollback,
+  Fn+arrows for history/paging. Platform bindings extracted to shared
+  `LuaBindings` (used by ScriptApp + REPL; drawing stays in ScriptApp).
+- **Storage** System Info shows flash free/total; Voice Memo deletes
+  the local WAV after a successful upload (the 1.5MB LittleFS fills in
+  <1 min of audio otherwise); SD probe backs off 10s after a failure.
+- **Status**: 71/71 native tests; flashed to hardware. REPL on-device
+  acceptance pending (keyboard feel, Fn-layer keys).
+
 ## Upcoming Plan
 
 1. **Finish SDK tasks 2–10** (above). Tasks needing the device for verification: 2 (input feel), 5 (mic chunk semantics — flagged risk), 9/10 (Recorder end-to-end, SD pin check SCK=40/MISO=39/MOSI=14/CS=12).
@@ -106,5 +128,5 @@ guide: `docs/lua-apps.md`.
    - Investigate USB drops during WiFi activity (suspected cable/power; recommend a better USB-C cable)
 4. **Candidate ideas after SDK (not committed)**
    - Audio playback (speaker) + voice-assistant demo (record → upload → TTS reply)
-   - Clock/NTP app; file manager app on `cardos::fs`
+   - Clock/NTP app
    - OTA firmware updates; auto-repeat keys; certificate verification option

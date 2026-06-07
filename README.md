@@ -25,8 +25,10 @@ Docs: [design](docs/superpowers/specs/2026-06-05-cardos-design.md) ·
 | Recorder | Push-to-talk voice memos (hold Space), saved to /flash or /sd, multipart upload with progress |
 | Voice Memo | Hold any key to record, release to upload to a Cloudflare Worker (audio → R2, metadata → db9) |
 | Lua Apps | Lists and runs Lua scripts in `/flash/apps`, installed over serial — no reflashing |
+| Lua REPL | Interactive Lua prompt with a persistent session; standard library + `cardos.*` platform calls (Fn+arrows: history / scrollback paging) |
 | App Uploader | Starts a local HTTP server (with QR code) to install Lua apps over WiFi from a browser |
-| System Info | SSID / IP / RSSI / heap / battery / uptime |
+| Files | File manager for /flash and /sd: browse directories, delete files and empty dirs (Backspace + confirm) |
+| System Info | SSID / IP / RSSI / heap / flash free/total / battery / uptime |
 
 ## Tech Stack
 
