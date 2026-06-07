@@ -1,5 +1,6 @@
 name: deploy-voice-worker
 on:
+  workflow_dispatch: {}  # manual redeploys: gh workflow run deploy-voice-worker
   push:
     branches: [main]
     paths:
