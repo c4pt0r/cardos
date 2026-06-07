@@ -3,6 +3,8 @@
 #include <M5Cardputer.h>
 #include <WiFi.h>
 
+#include "../sdk/Fs.h"
+
 namespace {
 // Deployed cardos-voice Worker (see backend/voice-worker). The upload key
 // is a shared secret compiled into firmware — it deters casual abuse of a
@@ -116,6 +118,7 @@ void VoiceMemoApp::update(uint32_t dtMs) {
     auto r = cardos::http::uploadFile(std::string(kWorkerUrl) + "/upload",
                                       path, "file", h, progress);
     if (r.ok()) {
+      cardos::fs::remove(path);  // uploaded: drop the local copy (1.5MB fs)
       status_ = "Uploaded OK";
       result_.setText("HTTP " + std::to_string(r.status) + "\n" +
                       r.body.substr(0, 400));
