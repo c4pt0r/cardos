@@ -15,3 +15,5 @@ FIX_MODEL = "gpt-4o-mini"
 #   DB9_TOKEN       - scoped db9 rw token (set once via `wrangler secret put`)
 #   UPLOAD_KEY      - shared key the device sends as X-Upload-Key (ditto)
 #   OPENAI_API_KEY  - synced from GitHub Secrets by the deploy workflow
+#   WEBHOOK_URL     - optional; transcript webhook endpoint (skip when unset)
+#   WEBHOOK_KEY     - optional; sent as X-Webhook-Key when set

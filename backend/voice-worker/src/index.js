@@ -2,13 +2,14 @@
 // stores audio in R2, and writes metadata to db9 (serverless Postgres).
 import { buildInsertSql, buildUpdateTextSql } from "./sql.js";
 import { transcribe, fixTranscript } from "./pipeline.js";
+import { buildWebhookPayload, sendWebhook } from "./webhook.js";
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     try {
       if (request.method === "POST" && url.pathname === "/upload") {
-        return await handleUpload(request, env);
+        return await handleUpload(request, env, ctx);
       }
       if (request.method === "GET" && url.pathname === "/recordings") {
         return await handleList(url, env);
@@ -66,7 +67,7 @@ async function db9(env, query) {
   return JSON.parse(text);
 }
 
-async function handleUpload(request, env) {
+async function handleUpload(request, env, ctx) {
   if (!safeEqual(request.headers.get("X-Upload-Key") || "", env.UPLOAD_KEY)) {
     return json({ error: "unauthorized" }, 401);
   }
@@ -135,6 +136,18 @@ async function handleUpload(request, env) {
     } catch (e) {
       pipeErr = String((e && e.message) || e);
     }
+  }
+  if (raw !== null) {
+    const payload = buildWebhookPayload(
+      { id, device, size_bytes: size },
+      { raw, corrected, cleaned },
+      new URL(request.url).origin
+    );
+    ctx.waitUntil(
+      sendWebhook(fetch, env, payload).then((r) => {
+        if (r !== "skipped") console.log(`[webhook] ${r}`);
+      })
+    );
   }
   const out = { id, key, size, raw, corrected, cleaned };
   if (pipeErr) out.error = pipeErr;
