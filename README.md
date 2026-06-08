@@ -70,8 +70,11 @@ Then open **Lua Apps** in the launcher (or use `run`). Requires `pyserial`.
 
 The Voice Memo app uploads to a Cloudflare Worker in
 [backend/voice-worker](backend/voice-worker) that stores audio in R2 and
-metadata in [db9](https://db9.ai) (serverless Postgres). See its README
-for routes, config, and deploy steps.
+metadata in [db9](https://db9.ai) (serverless Postgres), transcribes via
+OpenAI, and POSTs the result to an optional webhook. See its README for
+routes, config, and deploy steps; see
+[docs/webhook-integration.md](docs/webhook-integration.md) to build a
+webhook receiver (e.g. adapt another agent).
 
 ## License
 

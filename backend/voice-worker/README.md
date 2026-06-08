@@ -46,6 +46,12 @@ ALTER TABLE recordings ADD COLUMN IF NOT EXISTS corrected_text TEXT;
 ALTER TABLE recordings ADD COLUMN IF NOT EXISTS cleaned_text TEXT;
 ```
 
+## Transcript webhook
+
+After transcription the Worker POSTs the result to an optional `WEBHOOK_URL`.
+To build a receiver (e.g. adapt another agent), see
+[../../docs/webhook-integration.md](../../docs/webhook-integration.md).
+
 ## CI deploys
 
 Pushes to `main` touching `backend/voice-worker/**` run tests and deploy via
